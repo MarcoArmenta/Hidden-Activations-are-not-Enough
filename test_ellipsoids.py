@@ -10,7 +10,7 @@ EXPERIMENT = "true labels"
 def find_matrices(base_dir):
     matrix_paths = {}
     for j in range(10):  # Considering subfolders '0' to '9'
-        matrices_path = os.path.join(base_dir, str(j), 'train', 'matrices')
+        matrices_path = os.path.join(base_dir, str(j), 'train')
         if os.path.exists(matrices_path):
             for i in os.listdir(matrices_path):  # Iterating through each 'i' subdirectory
                 matrix_file_path = os.path.join(matrices_path, i, 'matrix.pt')
@@ -19,7 +19,6 @@ def find_matrices(base_dir):
                         matrix_paths[j] = [matrix_file_path]
                     else:
                         matrix_paths[j].append(matrix_file_path)
-
     return matrix_paths
 
 
@@ -39,7 +38,6 @@ def compute_statistics(matrix_paths):
 
 
 def compute_train_statistics(original_data, optimizer, lr, bs, epoch, verbose=False):
-    print(f"Computing matrix statistics")
     #for i in range(0,max_epoch+1,5):
     #    print(f"Epoch {i}")
     # original_matrices_path = f'out_of_distribution/{original_data}_vs_{original_data}/{original_data}_{optimizer}_{model}_vs_{original_data}/100/'

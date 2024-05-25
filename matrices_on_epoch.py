@@ -5,9 +5,9 @@ from test_ellipsoids import compute_train_statistics
 from manual_training import DEFAULT_TRAININGS
 
 #  We compute num_samples per class
-NUM_SAMPLES = 200
-# The number of cpus, which is the same as job arrays, is equal to num_samples / size_of_chunk_id
-SIZE_OF_CHUNK_ID = 100
+#NUM_SAMPLES_PER_CLASS = 500
+# The number of cpus, which is the same as job arrays, is equal to num_samples // size_of_chunk_id
+#CHUNK_SIZE = 100
 
 
 def parse_args(parser=None):
@@ -48,7 +48,7 @@ def parse_args(parser=None):
     parser.add_argument(
         "--default_training",
         type=bool,
-        default=False,
+        default=True,
         help="Wether to use a default trained network.",
     )
     parser.add_argument(
@@ -60,14 +60,14 @@ def parse_args(parser=None):
     parser.add_argument(
         "--num_samples_per_class",
         type=int,
-        default=20,
-        help="Index of default trained networks.",
+        default=500,
+        help="Number of data samples per class to compute matrices.",
     )
     parser.add_argument(
         "--chunk_size",
         type=int,
-        default=10,
-        help="Index of default trained networks.",
+        default=100,
+        help="Number of matrices to compute at a time for parallelization",
     )
 
     return parser.parse_args()
@@ -85,6 +85,7 @@ if __name__ == '__main__':
     chunk_size = args.chunk_size
 
     if args.default_training:
+        print('loading..')
         index = args.default_index
         experiment = DEFAULT_TRAININGS[f'experiment_{index}']
 
@@ -92,16 +93,14 @@ if __name__ == '__main__':
         dataset = experiment['dataset']
         lr = experiment['lr']
         batch_size = experiment['batch_size']
-        epoch = experiment['epoch']
+        epoch = experiment['epoch']-1
 
     else:
         optimizer_name = args.optimizer
         dataset = args.dataset
         lr = args.lr
         batch_size = args.batch_size
-        epoch = args.epoch
-
-    target_data = 'mnist'
+        epoch = args.epoch-1
 
     weights_path = f'experiments/weights/{dataset}/{optimizer_name}/{lr}/{batch_size}/'
     save_path = f'experiments/matrices/{dataset}/{optimizer_name}/{lr}/{batch_size}/'
@@ -125,11 +124,11 @@ if __name__ == '__main__':
 
     chunks = list(range(num_samples//chunk_size))
 
-    for chunk in chunks:
-        compute_matrices(chunk)
-        compute_matrices(chunk, False)
+    #for chunk in chunks:
+    #    compute_matrices(chunk)
+    #    compute_matrices(chunk, False)
 
     print(f"Matrices constructed.", flush=True)
 
-    print('Computing matrix statistics.', flush=True)
+    print('Computing matrix statistics', flush=True)
     compute_train_statistics(dataset, optimizer_name, lr, batch_size, epoch)

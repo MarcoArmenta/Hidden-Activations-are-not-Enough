@@ -16,7 +16,7 @@ DEFAULT_TRAININGS = {
         'optimizer': 'sgd',
         'lr': 0.01,
         'batch_size': 8,
-        'epoch': 10,
+        'epoch': 21,
         'save_every': 2
     },
     'experiment_1': {
@@ -251,7 +251,7 @@ if __name__ == '__main__':
 
         print(f"Epoch {epoch}, Training Accuracy: {train_accuracy:.4f}%, Test Accuracy: {test_accuracy:.4f}%")
         print(f"Training Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}")
-        #print(f'Current learning rate: {current_lr}')
+        print(f'Current learning rate: {current_lr}')
 
     print("Training finished")
 

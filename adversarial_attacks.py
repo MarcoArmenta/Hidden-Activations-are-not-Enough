@@ -14,7 +14,7 @@ import argparse
 
 from representation import MlpRepresentation
 from mlp import MLP
-from data_mod import interpolate, get_ellipsoid_data, is_in_ellipsoid, zero_std, get_model, subset
+from data_mod import get_ellipsoid_data, is_in_ellipsoid, zero_std, get_model, subset
 
 from manual_training import DEFAULT_TRAININGS
 
@@ -25,38 +25,53 @@ def parse_args(parser=None):
     parser.add_argument(
         "--dataset",
         type=str,
-        nargs="+",
         default="mnist",
         help="The datasets to train the model on.",
     )
     parser.add_argument(
         "--optimizer",
         type=str,
-        nargs="+",
         default="sgd",
-        help="Optimizer to train the model with.",
+        help="Optimizer used to train the model.",
+    )
+    parser.add_argument(
+        "--lr",
+        type=float,
+        default=0.01,
+        help="Learning rate used to train the model with.",
+    )
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=8,
+        help="Batch size used to train the model with.",
+    )
+    parser.add_argument(
+        "--epoch",
+        type=int,
+        default=20,
+        help="Epoch of training to do the analysis.",
+    )
+    parser.add_argument(
+        "--default_training",
+        type=bool,
+        default=True,
+        help="Wether to use a default trained network.",
+    )
+    parser.add_argument(
+        "--default_index",
+        type=int,
+        default=0,
+        help="Index of default trained networks.",
+    )
+    parser.add_argument(
+        "--subset_size",
+        type=int,
+        default=10000,
+        help="Size of data subset to .",
     )
 
-    return
-
-
-DATA_SET = "mnist"
-IN_SHAPE = (1,28,28) if DATA_SET == "mnist" or DATA_SET == "fashion" else (3,32,32)
-
-hyper = {
-        'optimizer': 'momentum',
-        'dataset': 'mnist',
-        'lr': 0.01,
-        'batch_size': 32,
-        'epoch': 8
-    }
-
-EXPERIMENT_PATH = f'{hyper["dataset"]}/{hyper["optimizer"]}/{hyper["lr"]}/{hyper["batch_size"]}/'
-MATRICES_PATH = 'experiments/matrices/' + EXPERIMENT_PATH + f'/{hyper["epoch"]}/'
-WEIGHT_PATH = 'experiments/weights/' + EXPERIMENT_PATH + f'epoch_{hyper["epoch"]}.pth'
-
-ADV = ["GN","FGSM","BIM","RFGSM","PGD","EOTPGD"]
-ATT = {a: i for i,a in enumerate(["None"]+ADV)}
+    return parser.parse_args()
 
 
 def adv_attack_exp(exp_dataset: torch.Tensor, exp_labels: torch.Tensor, representation, ellipsoids, n: int, overwrite: bool=False) -> None:
@@ -67,7 +82,7 @@ def adv_attack_exp(exp_dataset: torch.Tensor, exp_labels: torch.Tensor, represen
         print(f"Overwrite = {overwrite}")
         save = overwrite
 
-    model: MLP|ConvNet = get_model(WEIGHT_PATH, input_shape=IN_SHAPE)
+    model: MLP = get_model(WEIGHT_PATH)
 
     no_attack = torchattacks.VANILA(model)
     GN_attack = torchattacks.GN(model)
@@ -121,66 +136,13 @@ def get_attacks():
     return working_attacks
 
 
-def interpolate_adv_attacks_exp(exp_dataset: torch.Tensor, exp_labels: torch.Tensor, representation, ellipsoids: dict, overwrite: bool=False) -> None:
-    # Interpolate between working adversarial examples and true image
-    model: MLP|ConvNet = get_model(WEIGHT_PATH, input_shape=IN_SHAPE)
-    working_attacks = get_attacks()
-    attacks_cls = dict(zip(ADV,
-                           [torchattacks.GN(model),
-                            torchattacks.FGSM(model),
-                            torchattacks.BIM(model),
-                            torchattacks.RFGSM(model),
-                            torchattacks.PGD(model),
-                            torchattacks.EOTPGD(model)]))
-    
-    # Make set of working attacks
-    adv_dataset = {att: torch.zeros([len(working_attacks[att]),IN_SHAPE[0],IN_SHAPE[1],IN_SHAPE[2]]) for att in working_attacks}
-    adv_labels = {att: torch.zeros([len(working_attacks[att])],dtype=torch.long) for att in working_attacks}
-    for att in working_attacks:
-        for i,j in enumerate(working_attacks[att]):
-            adv_dataset[att][i] = exp_dataset[j][0]
-            adv_labels[att][i] = exp_labels[j]
-
-    attacked_dataset = {a: attacks_cls[a](adv_dataset[a], adv_labels[a]) for a in ADV}
-    # show_adv_img(adv_dataset["FGSM"][0], attacked_dataset["FGSM"][0], adv_labels["FGSM"][0], str(torch.argmax(model.forward(attacked_dataset["FGSM"][0])).item()), "FGSM")
-    # show_adv_img(adv_dataset["PGD"][3], attacked_dataset["PGD"][3], adv_labels["PGD"][3], str(torch.argmax(model.forward(attacked_dataset["PGD"][3])).item()), "PGD")    
-
-    # Loop on working attacks and for each, take a path from exp_dataset to attacked,
-    # compute prediction, and where in ellipsoid
-    for att in ADV:
-        print(f"Interpolate: {att}")
-        data_inter = {i: {"predictions": [], "in_ellipsoid_start": [], "in_ellipsoid_end": []} for i in range(len(adv_dataset[att]))}
-        save = True
-        if os.path.exists(f"{MATRICES_PATH}{att}_interpolate.json"):
-            print("File already exists")
-            print(f"Overwrite = {overwrite}")
-            save = overwrite
-        for i,im in enumerate(adv_dataset[att]):
-            bad_pred = torch.argmax(model.forward(attacked_dataset[att][i]))
-            for alpha in range(21):
-                inter = interpolate(im, attacked_dataset[att][i], alpha/20)
-                rep = representation.forward(inter)
-                ell_start = is_in_ellipsoid(rep, 
-                                      get_ellipsoid_data(ellipsoids,adv_labels[att][i],"mean"), 
-                                      get_ellipsoid_data(ellipsoids,adv_labels[att][i],"std"))
-                ell_end = is_in_ellipsoid(rep, 
-                                      get_ellipsoid_data(ellipsoids,bad_pred,"mean"), 
-                                      get_ellipsoid_data(ellipsoids,bad_pred,"std"))
-                data_inter[i]["predictions"].append(torch.argmax(model.forward(inter)).item())
-                data_inter[i]["in_ellipsoid_start"].append(int(ell_start.item()))
-                data_inter[i]["in_ellipsoid_end"].append(int(ell_end.item()))
-        if save:
-            with open(f"{MATRICES_PATH}{att}_interpolate.json", 'w') as json_inter:
-                json.dump(data_inter, json_inter, indent=4)
-
-
 def in_ellipsoid_attacked(exp_dataset: torch.Tensor, exp_labels: torch.Tensor, representation, ellipsoids: dict, overwrite: bool=False) -> None:
     save = True
     if os.path.exists(f"{MATRICES_PATH}in_ellipsoid_attacked.json"):
         print("File already exists")
         print(f"Overwrite = {overwrite}")
         save = overwrite
-    model = get_model(WEIGHT_PATH, IN_SHAPE)
+    model = get_model(WEIGHT_PATH)
     working_attacks = get_attacks()
     cases = ["working", "not working", "bad prediction"]
     data_to_save = {a: {c: {"mean": 0, "std": 0} for c in cases} for a in ADV}
@@ -214,7 +176,7 @@ def zero_dim_attacked(exp_dataset: torch.Tensor, exp_labels: torch.Tensor, repre
         print("File already exists")
         print(f"Overwrite = {overwrite}")
         save = overwrite
-    model = get_model(WEIGHT_PATH, input_shape=IN_SHAPE)
+    model = get_model(WEIGHT_PATH)
     working_attacks = get_attacks()
     cases = ["working", "not working", "bad prediction"]
     data_to_save = {a: {c: {"true image" : {"mean": 0, "std": 0}, "attacked image" : {"mean": 0, "std": 0}} for c in cases} for a in ADV}
@@ -226,7 +188,7 @@ def zero_dim_attacked(exp_dataset: torch.Tensor, exp_labels: torch.Tensor, repre
                             torchattacks.PGD(model),
                             torchattacks.EOTPGD(model)]))
     # Make set of working attacks
-    adv_dataset = {att: torch.zeros([len(working_attacks[att]),IN_SHAPE[0],IN_SHAPE[1],IN_SHAPE[2]]) for att in working_attacks}
+    adv_dataset = {att: torch.zeros([len(working_attacks[att]),1,28,28]) for att in working_attacks}
     adv_labels = {att: torch.zeros([len(working_attacks[att])],dtype=torch.long) for att in working_attacks}
     for att in working_attacks:
         for i,j in enumerate(working_attacks[att]):
@@ -276,7 +238,7 @@ def zero_dim_out_of_dist(exp_dataset: torch.Tensor, representation, ellipsoids: 
         out_dist_train = torchvision.datasets.MNIST(root='./data', train=True, transform=transform, download=True)
     else:
         raise NotImplementedError(f"Data set must be 'mnist' or 'fashion', not '{DATA_SET}'.")
-    model: MLP|ConvNet = get_model(WEIGHT_PATH, input_shape=IN_SHAPE)
+    model: MLP = get_model(WEIGHT_PATH, input_shape=IN_SHAPE)
     out_dist_data, _ = subset(out_dist_train, len(exp_dataset), input_shape=IN_SHAPE)
     print(f"Model: {DATA_SET}")
     print(f"Out of distribution data: {out_of_dist} (n = {len(exp_dataset)})")
@@ -297,26 +259,29 @@ def zero_dim_out_of_dist(exp_dataset: torch.Tensor, representation, ellipsoids: 
 
 def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
                              exp_dataset_test: torch.Tensor,
-                             exp_labels_train: torch.Tensor,
                              exp_labels_test: torch.Tensor,
                              representation,
                              ellipsoids: dict,
-                             eps: float = 0.1,
+                             n: int = 5000,
                              std: float = 2,
                              d1: float = 0.1,
-                             d2: float = 2) -> None:
-    # Take a few examples from exp_dataset and compute mean and std of zero dims
-    # For the other examples which are either normal or attacked, predict if it was attacked or not.
-    n = 5000  # Sample size to compute mean and std of zero dims
-    model = get_model(WEIGHT_PATH, input_shape=IN_SHAPE)
+                             d2: float = 0.1) -> None:
+
+    model = get_model(WEIGHT_PATH)
     attacks = [a for a in ADV if a != "BIM"]  # Can't predict BIM with this method
+    #["GN", "FGSM", "BIM", "RFGSM", "PGD", "EOTPGD", "FFGSM", "TPGD", "MIFGSM", "UPGD", "APGD", "APGDT", "DIFGSM",
+    # "TIFGSM", "Jitter",
+    # "NIFGSM", "PGDRS", "SINIFGSM", "VMIFGSM", "VNIFGSM", "CW", "PGDL2", "PGDRSL2", "DeepFool", "SparseFool",
+    # "OnePixel", "Pixle",
+    # "FAB", "AutoAttack", "Square", "SPSA", "JSMA", "EADL1", "EADEN", "PIFGSM", "PIFGSMPP"]
     attacks_cls = dict(zip(["None"]+attacks,
                            [torchattacks.VANILA(model),
                             torchattacks.GN(model),
                             torchattacks.FGSM(model),
                             torchattacks.RFGSM(model),
                             torchattacks.PGD(model),
-                            torchattacks.EOTPGD(model)]))
+                            torchattacks.EOTPGD(model),
+                            ]))
 
     path_adv_examples = 'experiments/adversarial_examples/' + EXPERIMENT_PATH + '/adversarial_examples.pth'
 
@@ -326,7 +291,8 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
     else:
         print("Computing adversarial examples...")
         attacked_dataset = {a: attacks_cls[a](exp_dataset_test[n:], exp_labels_test[n:]) for a in ["None"]+attacks}
-        os.makedirs(f'experiments/adversarial_examples/{EXPERIMENT_PATH}/')
+        #attacked_dataset = {a: attacks_cls[a](exp_dataset_test, exp_labels_test) for a in ["None"]+attacks}
+        #os.makedirs(f'experiments/adversarial_examples/{EXPERIMENT_PATH}/')
         torch.save(attacked_dataset, path_adv_examples)
 
     # Compute mean and std of number of (almost) zero dims
@@ -338,11 +304,11 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
         mat = representation.forward(im)
 
         a = get_ellipsoid_data(ellipsoids, pred, "std")
-        b = zero_std(mat, a, 0.1)
+        b = zero_std(mat, a, d1)
         c = b.expand([1])
 
         zeros = torch.cat((zeros, c))
-        #print('Ready...')
+
     reject_at = zeros.mean().item() - std*zeros.std().item()
     print(f"Will reject when 'zero dims' < {reject_at}.")
     results = []  # (Rejected, Was attacked)ygyh
@@ -351,7 +317,11 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
         im = attacked_dataset[a][i]
         pred = torch.argmax(model.forward(im))
         mat = representation.forward(im)
-        res = ((reject_at > zero_std(mat, get_ellipsoid_data(ellipsoids, pred, "std"), 0.1).item()), (a != "None"))
+
+        b = get_ellipsoid_data(ellipsoids, pred, "std")
+        c = zero_std(mat, b, d2).item()
+
+        res = ((reject_at > c), (a != "None"))
         #TODO: save images that break the deffence
         #if res[0]:
 
@@ -369,21 +339,27 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
     print(f"Percentage of wrong rejections: {wrongly_rejected/(len(results)-num_att)}.")
 
 
-def reject_predicted_out_of_dist(exp_dataset_train: torch.Tensor, exp_dataset_test: torch.Tensor, representation, ellipsoids: dict, eps: float, std: float) -> None:
+def reject_predicted_out_of_dist(exp_dataset_train: torch.Tensor,
+                                 exp_dataset_test: torch.Tensor,
+                                 representation,
+                                 ellipsoids: dict,
+                                 eps: float,
+                                 std: float,
+                                 dataset: str) -> None:
     # Same principle as with 'reject_predicted_attacks', but with 'out of distribution' data
     n = 5000  # Sample size to compute mean and std of zero dims
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
-    if DATA_SET == "mnist":
+    if dataset == "mnist":
         out_of_dist = "fashion"
         out_dist_test = torchvision.datasets.FashionMNIST(root='./data', train=False, transform=transform, download=True)
-    elif DATA_SET == "fashion":
+    elif dataset == "fashion":
         out_of_dist = "mnist"
         out_dist_test = torchvision.datasets.MNIST(root='./data', train=False, transform=transform, download=True)
     else:
-        raise NotImplementedError(f"Data set must be 'mnist' or 'fashion', not '{DATA_SET}'.")
-    model: MLP = get_model(WEIGHT_PATH, input_shape=IN_SHAPE)
-    out_dist_data, _ = subset(out_dist_test, len(exp_dataset_test), input_shape=IN_SHAPE)
-    print(f"Model: {DATA_SET}")
+        raise NotImplementedError(f"Data set must be 'mnist' or 'fashion', not '{dataset}'.")
+    model: MLP = get_model(WEIGHT_PATH)
+    out_dist_data, _ = subset(out_dist_test, len(exp_dataset_test), input_shape=(1, 28, 28))
+    print(f"Model: {dataset}")
     print(f"Out of distribution data: {out_of_dist}")
     # Compute mean and std of number of (almost) zero dims in in_dist_data
     print("Compute rejection level.")
@@ -440,38 +416,62 @@ def show_adv_img(img: torch.Tensor, attacked_img: torch.Tensor, label: str, outp
 
 
 if __name__ == "__main__":
+    args = parse_args()
+    if args.default_training:
+        print('loading..')
+        index = args.default_index
+        experiment = DEFAULT_TRAININGS[f'experiment_{index}']
+
+        optimizer_name = experiment['optimizer']
+        dataset = experiment['dataset']
+        lr = experiment['lr']
+        batch_size = experiment['batch_size']
+        epoch = experiment['epoch']-1
+
+    else:
+        optimizer_name = args.optimizer
+        dataset = args.dataset
+        lr = args.lr
+        batch_size = args.batch_size
+        epoch = args.epoch-1
+
+
+    EXPERIMENT_PATH = f'{dataset}/{optimizer_name}/{lr}/{batch_size}'
+    print("Experiment: ", EXPERIMENT_PATH)
+    MATRICES_PATH = 'experiments/matrices/' + EXPERIMENT_PATH + f'/{epoch}/'
+    WEIGHT_PATH = 'experiments/weights/' + EXPERIMENT_PATH + f'/epoch_{epoch}.pth'
+
+    ADV = ["GN", "FGSM", "BIM", "RFGSM", "PGD",
+           "EOTPGD"]  # , "FFGSM","TPGD","MIFGSM","UPGD","APGD","APGDT","DIFGSM","TIFGSM","Jitter",
+    # "NIFGSM","PGDRS","SINIFGSM","VMIFGSM","VNIFGSM","CW","PGDL2","PGDRSL2","DeepFool","SparseFool","OnePixel","Pixle",
+    # "FAB","AutoAttack","Square","SPSA","JSMA","EADL1","EADEN","PIFGSM","PIFGSMPP"]
+    ATT = {a: i for i, a in enumerate(["None"] + ADV)}
+
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
-    if DATA_SET == "mnist":
+    if args.dataset == "mnist":
         train_set = torchvision.datasets.MNIST(root='./data', train=True, transform=transform, download=True)
         test_set = torchvision.datasets.MNIST(root='./data', train=False, transform=transform, download=True)
-    elif DATA_SET == "fashion":
+    elif args.dataset == "fashion":
         train_set = torchvision.datasets.FashionMNIST(root='./data', train=True, transform=transform, download=True)
         test_set = torchvision.datasets.FashionMNIST(root='./data', train=False, transform=transform, download=True)
-    elif DATA_SET == "cifar10":
-        train_set = torchvision.datasets.CIFAR10(root='./data', train=True, transform=transform, download=True)
-        test_set = torchvision.datasets.CIFAR10(root='./data', train=False, transform=transform, download=True)
-    representation = MlpRepresentation(get_model(WEIGHT_PATH, input_shape=IN_SHAPE))
+
+    representation = MlpRepresentation(get_model(WEIGHT_PATH))
     ellipsoids_file = open(f"{MATRICES_PATH}/matrix_statistics.json")
     ellipsoids: dict = json.load(ellipsoids_file)
 
     # Make set of images for experiment
-    n = 10000
-    exp_dataset_train, exp_labels_train = subset(train_set, n, IN_SHAPE)
-    exp_dataset_test, exp_labels_test = subset(test_set, n, IN_SHAPE)
+    exp_dataset_train, exp_labels_train = subset(train_set, args.subset_size)
+    exp_dataset_test, exp_labels_test = subset(test_set, args.subset_size)
 
-    # adv_attack_exp(exp_dataset_train, exp_labels_train, representation, ellipsoids, n)
-    # interpolate_adv_attacks_exp(exp_dataset_train, exp_labels_train, representation, ellipsoids)
-    # in_ellipsoid_attacked(exp_dataset_train, exp_labels_train, representation, ellipsoids)
-    # zero_dim_attacked(exp_dataset_train, exp_labels_train, representation, ellipsoids, eps=0.1, overwrite=True)
-    # zero_dim_out_of_dist(exp_dataset_train, representation, ellipsoids, eps=0.1)
-
-    #reject_predicted_attacks(exp_dataset_train, exp_dataset_test, exp_labels_train, exp_labels_test, representation, ellipsoids, eps=0.1, std=1)
     reject_predicted_attacks(exp_dataset_train,
                              exp_dataset_test,
-                             exp_labels_train,
                              exp_labels_test,
                              representation,
-                             ellipsoids)
+                             ellipsoids,
+                             n=args.subset_size//4,
+                             std=1,
+                             d1=0.1,
+                             d2=0.1)
 
     #reject_predicted_out_of_dist(exp_dataset_train, exp_dataset_test, representation, ellipsoids, eps=0.1, std=1.5)
     reject_predicted_out_of_dist(exp_dataset_train, exp_dataset_test, representation, ellipsoids, eps=0.1, std=2)
