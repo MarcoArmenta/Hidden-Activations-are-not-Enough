@@ -160,29 +160,3 @@ def test_ellipse(original_data, target_data, optimizer, model, train_or_test, el
     print('Percentages of USELESS dimensions: ', percentages)
     print('Different percentages: ', len(percentages))
     return correct/total
-
-
-if __name__ == '__main__':
-    original_data = 'mnist'
-    target_data = 'mnist'
-    optimizer = 'sgd'
-    train_or_test = 'test'
-
-    if original_data == 'mnist': # 100*2 train, 8000 test
-        model = 'small-mlp_0.01_8' # generalize
-        max_epoch = 100
-        #model = 'small-mlp_0.1_32' # underfit
-    elif original_data == 'fashion':
-        #model = 'small-mlp_1e-05_16'
-        model = 'small-mlp_0.01_16'
-        max_epoch = 100
-    elif original_data == 'cifar10':
-        model = 'small-mlp_0.001_8'
-        max_epoch = 60
-
-    #model = 'conv_0.001_64' # 140**2 train,
-    #model = 'res_0.0001_32' # 67**2 train,
-
-    #compute_train_statistics(model, original_data, target_data, optimizer, epoch=9, train_or_test)
-    matrix_acc = test_ellipse(original_data, target_data, optimizer, model, train_or_test, elipse=True)
-    print('Accuracy for ellipse: ', matrix_acc)
