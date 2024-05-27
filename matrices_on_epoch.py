@@ -16,14 +16,12 @@ def parse_args(parser=None):
     parser.add_argument(
         "--dataset",
         type=str,
-        nargs="+",
         default="mnist",
         help="The datasets to train the model on.",
     )
     parser.add_argument(
         "--optimizer",
         type=str,
-        nargs="+",
         default="sgd",
         help="Optimizer to train the model with.",
     )
@@ -54,7 +52,7 @@ def parse_args(parser=None):
     parser.add_argument(
         "--default_index",
         type=int,
-        default=0,
+        default=2,
         help="Index of default trained networks.",
     )
     parser.add_argument(
@@ -124,9 +122,9 @@ if __name__ == '__main__':
 
     chunks = list(range(num_samples//chunk_size))
 
-    #for chunk in chunks:
-    #    compute_matrices(chunk)
-    #    compute_matrices(chunk, False)
+    for chunk in chunks:
+        compute_matrices(chunk)
+        compute_matrices(chunk, False)
 
     print(f"Matrices constructed.", flush=True)
 

@@ -17,6 +17,7 @@ DEFAULT_TRAININGS = {
         'lr': 0.01,
         'batch_size': 8,
         'epoch': 21,
+        'reduce_lr_each': 5,
         'save_every': 2
     },
     'experiment_1': {
@@ -24,8 +25,27 @@ DEFAULT_TRAININGS = {
         'dataset': 'mnist',
         'lr': 0.01,
         'batch_size': 32,
-        'epoch': 10,
+        'epoch': 11,
+        'reduce_lr_each': 5,
         'save_every': 2
+    },
+    'experiment_2': {
+        'optimizer': 'adam',
+        'dataset': 'fashion',
+        'lr': 1e-06,
+        'batch_size': 16,
+        'epoch': 51,
+        'reduce_lr_each': 20,
+        'save_every': 10
+    },
+    'experiment_3': {
+        'optimizer': 'sgd',
+        'dataset': 'fashion',
+        'lr': 0.1,
+        'batch_size': 16,
+        'epoch': 51,
+        'reduce_lr_each': 20,
+        'save_every': 10
     }
 }
 
@@ -46,9 +66,7 @@ def parse_args(parser=None):
         "--optimizer",
         type=str,
         nargs="+",
-        default=[
-            "sgd"
-        ],
+        default="sgd",
         help="Optimizer to train the model with.",
     )
     parser.add_argument(
@@ -59,35 +77,39 @@ def parse_args(parser=None):
     )
     parser.add_argument(
         "--batch_size",
-        type=str,
-        default=[
-            8
-        ],
+        type=int,
+        default=8,
         help="The batch size.",
     )
     parser.add_argument(
         "--epochs",
-        type=str,
+        type=int,
+        default=20,
+        help="The number of epochs to train.",
+    )
+    parser.add_argument(
+        "--reduce_lr_each",
+        type=int,
         default=20,
         help="The number of epochs to train.",
     )
     parser.add_argument(
         "--save_every_epochs",
-        type=str,
+        type=int,
         default=2,
         help="Weights are saved every this amount of epochs during training.",
     )
     parser.add_argument(
         "--default_hyper_parameters",
-        type=int,
+        type=bool,
         default=True,
-        help="If True, trains all default models."
+        help="If True, trains one of the default models."
              f"{DEFAULT_TRAININGS}",
     )
     parser.add_argument(
         "--default_index",
         type=int,
-        default=0,
+        default=3,
         help="The index of the default model to train."
     )
     return parser.parse_args()
@@ -131,6 +153,7 @@ if __name__ == '__main__':
         batch_size = experiment['batch_size']
         epochs = experiment['epoch']
         save_every = experiment['save_every']
+        reduce_lr = experiment['reduce_lr_each']
 
     else:
         optimizer_name = args.optimizer
@@ -139,6 +162,7 @@ if __name__ == '__main__':
         batch_size = args.batch_size
         epochs = args.epoch
         save_every = args.save_every_epochs
+        reduce_lr = args.reduce_lr_each
 
     dir = f"experiments/weights/{dataset}/{optimizer_name}/{lr}/{batch_size}/"
     if os.path.exists(dir + 'results.json'):
@@ -183,7 +207,9 @@ if __name__ == '__main__':
     train_accuracies = []
     test_accuracies = []
 
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
+    scheduler = optim.lr_scheduler.StepLR(optimizer,
+                                          step_size=reduce_lr,
+                                          gamma=0.1)
 
     print("Training...", flush=True)
     for epoch in range(epochs):
