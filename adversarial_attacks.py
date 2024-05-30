@@ -75,7 +75,7 @@ def parse_args(parser=None):
     parser.add_argument(
         "--default_index",
         type=int,
-        default=2,
+        default=0,
         help="Index of default trained networks.",
     )
     parser.add_argument(
@@ -94,7 +94,7 @@ def parse_args(parser=None):
         "--d2",
         type=float,
         default=0.1,
-        help="Determines how small should the standard deviation be per coordinate when rejecting.",
+        help="Determines how small should the standard deviation be per coordinate when detecting.",
     )
     parser.add_argument(
         "--nb_workers",
@@ -120,7 +120,7 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
 
     attacks = ["GN", "FGSM", "RFGSM", "PGD", "EOTPGD", "FFGSM", "TPGD", "MIFGSM", "UPGD", "DIFGSM",
            "NIFGSM", "PGDRS", "SINIFGSM", "VMIFGSM", "VNIFGSM", "CW", "PGDL2", "PGDRSL2", "DeepFool", "SparseFool",
-           "OnePixel", "Pixle", "FAB"]#, "AutoAttack", "Square", "SPSA", "JSMA", "EADL1", "EADEN"]
+           "OnePixel", "Pixle", "FAB"]
 
     attacks_cls = dict(zip(["None"]+attacks,
                            [torchattacks.VANILA(model),
@@ -152,13 +152,6 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
                             torchattacks.OnePixel(model),
                             torchattacks.Pixle(model),
                             torchattacks.FAB(model),
-
-                            #torchattacks.AutoAttack(model),
-                            #torchattacks.Square(model),
-                            #torchattacks.SPSA(model),
-                            #torchattacks.JSMA(model),
-                            #torchattacks.EADL1(model),
-                            #torchattacks.EADEN(model),
                             ]))
 
     path_adv_examples = 'experiments/adversarial_examples/' + experiment_path + f'/adversarial_examples_{num_samples_rejection_level}.pth'
@@ -176,7 +169,7 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
                      for a in ["None"] + attacks
                      ]
 
-        with Pool(processes=args.nb_workers) as pool:
+        with Pool(processes=8) as pool:
             results = pool.map(apply_attack, arguments)
 
         attacked_dataset = dict(results)
@@ -206,6 +199,11 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
             zeros = torch.cat((zeros, c))
 
         reject_at = zeros.mean().item() - std*zeros.std().item()
+
+        if reject_at <= 0:
+            ValueError("Rejection level is less or equal than 0")
+            return
+
         with open(reject_path, 'w') as json_file:
             json.dump([reject_at], json_file, indent=4)
 
@@ -240,8 +238,8 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
             num_att += 1
         else:
             wrongly_rejected += int(rej)
-    print(f"Percentage of good defences: {good_defence/num_att}.")
-    print(f"Percentage of wrong rejections: {wrongly_rejected/(len(results)-num_att)}.")
+    print(f"Percentage of good defences: {good_defence/num_att}")
+    print(f"Percentage of wrong rejections: {wrongly_rejected/(len(results)-num_att)}")
 
 
 def show_adv_img(img: torch.Tensor) -> None:
@@ -280,10 +278,10 @@ if __name__ == "__main__":
     weights_path = 'experiments/weights/' + experiment_path + f'/epoch_{epoch}.pth'
 
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
-    if args.dataset == "mnist":
+    if dataset == "mnist":
         train_set = torchvision.datasets.MNIST(root='./data', train=True, transform=transform, download=True)
         test_set = torchvision.datasets.MNIST(root='./data', train=False, transform=transform, download=True)
-    elif args.dataset == "fashion":
+    elif dataset == "fashion":
         train_set = torchvision.datasets.FashionMNIST(root='./data', train=True, transform=transform, download=True)
         test_set = torchvision.datasets.FashionMNIST(root='./data', train=False, transform=transform, download=True)
 
@@ -308,8 +306,8 @@ if __name__ == "__main__":
                              d1=args.d1,
                              d2=args.d2)
 
-    adv_success = 'experiments/adversarial_examples/' + experiment_path + '/adv_success.pth'
-    if os.path.exists(adv_success):
-        im = torch.load(adv_success)
-        for i in range(len(im)):
-            show_adv_img(im[i].detach().numpy())
+    #adv_success = 'experiments/adversarial_examples/' + experiment_path + f'/adv_success_{args.subset_size//2}_{args.std}_{args.d1}_{args.d2}.pth'
+    #if os.path.exists(adv_success):
+    #    im = torch.load(adv_success)
+    #    for i in range(len(im)):
+    #        show_adv_img(im[i].detach().numpy())

@@ -52,7 +52,7 @@ def parse_args(parser=None):
     parser.add_argument(
         "--default_index",
         type=int,
-        default=2,
+        default=0,
         help="Index of default trained networks.",
     )
     parser.add_argument(
@@ -124,7 +124,6 @@ if __name__ == '__main__':
 
     for chunk in chunks:
         compute_matrices(chunk)
-        compute_matrices(chunk, False)
 
     print(f"Matrices constructed.", flush=True)
 

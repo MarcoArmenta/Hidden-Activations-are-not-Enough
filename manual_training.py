@@ -56,16 +56,12 @@ def parse_args(parser=None):
     parser.add_argument(
         "--dataset",
         type=str,
-        nargs="+",
-        default=[
-            "mnist"
-        ],
+        default="mnist",
         help="The datasets to train the model on.",
     )
     parser.add_argument(
         "--optimizer",
         type=str,
-        nargs="+",
         default="sgd",
         help="Optimizer to train the model with.",
     )

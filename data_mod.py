@@ -48,8 +48,8 @@ def is_in_ellipsoid(matrix: torch.Tensor,
 
 def zero_std(matrix: torch.Tensor,
              ellipsoid_std: torch.Tensor,
-             eps: float=0) -> torch.LongTensor:
-    return torch.count_nonzero(torch.logical_and((ellipsoid_std <= eps), (matrix > eps)))  # ¬(P => Q) <==> P ∧ ¬Q
+             d1: float=0) -> torch.LongTensor:
+    return torch.count_nonzero(torch.logical_and((ellipsoid_std <= d1), (matrix > d1)))  # ¬(P => Q) <==> P ∧ ¬Q
 
 def get_model(path: str):
     weight_path = torch.load(path, map_location=torch.device('cpu'))
