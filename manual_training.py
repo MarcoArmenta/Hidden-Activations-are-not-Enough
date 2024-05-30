@@ -97,15 +97,21 @@ def parse_args(parser=None):
     )
     parser.add_argument(
         "--default_hyper_parameters",
-        type=bool,
-        default=True,
+        action='store_true',
         help="If True, trains one of the default models."
              f"{DEFAULT_TRAININGS}",
     )
+    #parser.add_argument(
+    #    "--default_hyper_parameters",
+    #    type=bool,
+    #    default=True,
+    #    help="If True, trains one of the default models."
+    #         f"{DEFAULT_TRAININGS}",
+    #)
     parser.add_argument(
         "--default_index",
         type=int,
-        default=3,
+        default=0,
         help="The index of the default model to train."
     )
     return parser.parse_args()
@@ -156,7 +162,7 @@ if __name__ == '__main__':
         dataset = args.dataset
         lr = args.lr
         batch_size = args.batch_size
-        epochs = args.epoch
+        epochs = args.epochs
         save_every = args.save_every_epochs
         reduce_lr = args.reduce_lr_each
 

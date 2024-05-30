@@ -4,11 +4,10 @@ from multiprocessing import Pool
 
 # Define the parameter grid
 std_values = [0.75, 1, 1.5, 2]
-d1_values = [0.01, 0.1, 0.3, 0.5, 0.8, 1]  # Example values, replace with appropriate ones
-d2_values = [0.01, 0.1, 0.3, 0.5, 0.8, 1]  # Example values, replace with appropriate ones
+d1_values = [0.01, 0.1, 0.3, 0.5, 0.8, 1]
+d2_values = [0.01, 0.1, 0.3, 0.5, 0.8, 1]
 index = [0, 1, 2, 3]
 
-# Create all combinations of hyperparameters
 param_grid = list(itertools.product(std_values, d1_values, d2_values, index))
 
 # File to store the results
@@ -18,15 +17,6 @@ results_file = 'grid_search_results.txt'
 # Function to run the adversarial_attacks.py script with given parameters
 def run_script(params):
     std, d1, d2, index = params
-    #result = subprocess.run(
-    #    ['python',
-    #     'adversarial_attacks.py',
-    #     '--default_index', str(0),
-    #     '--std', str(std),
-    #     '--d1', str(d1),
-    #     '--d2', str(d2)],
-    #    capture_output=True, text=True
-    #)
 
     cmd = f"source ~/NeuralNets/MatrixStatistics/matrix/bin/activate &&" \
           f" python adversarial_attacks.py --std {std} --d1 {d1} --d2 {d2} " \

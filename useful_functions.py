@@ -1,67 +1,6 @@
 import os
-import json
-
 import torch
-from torch.utils.data import DataLoader
-import torchvision
-from torchvision.datasets import MNIST, FashionMNIST
-
-
-def fashion_dataset(train_batch_size: int, test_batch_size: int, experiment="true labels"): # -> dict[str, int|str|None]:
-    transforms = torchvision.transforms.Compose([torchvision.transforms.ToTensor(), torchvision.transforms.Normalize((0.5,), (0.5,))])
-    train_dataset = FashionMNIST("./data", train=True, download=True, transform=transforms)
-    test_dataset = FashionMNIST("./data", train=False, download=True, transform=transforms)
-    
-    train_loader = DataLoader(train_dataset, batch_size=train_batch_size, shuffle=(experiment != "true labels"))
-    test_loader = DataLoader(test_dataset, batch_size=test_batch_size, shuffle=(experiment != "true labels"))
-
-    dict_data = {"x_train": next(iter(train_loader))[0],
-                 "y_train": next(iter(train_loader))[1],
-                 "x_test": next(iter(test_loader))[0],
-                 "y_test": next(iter(test_loader))[1],
-                 "num_classes": 10,
-                 "num_features": 784,
-                 "train_loader": train_loader,
-                 "test_loader": test_loader,
-                 "train_data": train_dataset,
-                 "test_data": test_dataset,
-                 "input shape": (1,28,28),
-                 }
-    return dict_data
-
-
-def mnist_dataset(): # -> dict[str, int|str|None]:
-    path = f'experiments/datasets/mnist/'
-
-    print(path + 'train_dataset.pt')
-    train = torch.jit.load(path + 'train_dataset.pt')
-    val = torch.jit.load(path + 'val_dataset.pt')
-    test = torch.jit.load(path + 'test_dataset.pt')
-
-    print(type(train))
-    print(len(train))
-    input('loding data...')
-    train_loader = train
-    test_loader = test
-    val_loader = val
-
-    train_dataset = MNIST("./data", train=True, download=True, transform=torchvision.transforms.ToTensor())
-    test_dataset = MNIST("./data", train=False, download=True, transform=torchvision.transforms.ToTensor())
-
-    dict_data = {"x_train": next(iter(train_loader))[0],
-                 "y_train": next(iter(train_loader))[1],
-                 "x_test": next(iter(test_loader))[0],
-                 "y_test": next(iter(test_loader))[1],
-                 "num_classes": 10,
-                 "num_features": 784,
-                 "train_loader": train_loader,
-                 "test_loader": test_loader,
-                 "val_loader": val_loader,
-                 "train_data": train_dataset,
-                 "test_data": test_dataset,
-                 "input shape": (1,28,28),
-                 }
-    return dict_data
+import json
 
 
 def compute_chunk_of_matrices(data, representation, epoch: int, clas, train=True, chunk_size=10, root=None, chunk_id=0) -> None:
@@ -92,3 +31,52 @@ def compute_chunk_of_matrices(data, representation, epoch: int, clas, train=True
 
         rep = representation.forward(d)
         torch.save(rep, directory+str(idx)+'/'+'matrix.pt')
+
+
+# Function to accurately locate matrix.pt files
+def find_matrices(base_dir):
+    matrix_paths = {}
+    for j in range(10):  # Considering subfolders '0' to '9'
+        matrices_path = os.path.join(base_dir, str(j), 'train')
+        if os.path.exists(matrices_path):
+            for i in os.listdir(matrices_path):  # Iterating through each 'i' subdirectory
+                matrix_file_path = os.path.join(matrices_path, i, 'matrix.pt')
+                if os.path.isfile(matrix_file_path):  # Check if matrix.pt exists
+                    if j not in matrix_paths:
+                        matrix_paths[j] = [matrix_file_path]
+                    else:
+                        matrix_paths[j].append(matrix_file_path)
+    return matrix_paths
+
+
+# Function to load matrices and compute statistics
+def compute_statistics(matrix_paths):
+    statistics = {}
+    for j, paths in matrix_paths.items():
+        matrices = [torch.load(path) for path in paths]
+        # Stack all matrices to compute statistics across all matrices in a subfolder
+        stacked_matrices = torch.stack(matrices)
+        # Compute mean and std across the stacked matrices
+        mean_matrix = torch.mean(stacked_matrices, dim=0)
+        std_matrix = torch.std(stacked_matrices, dim=0)
+        # Store the computed statistics
+        statistics[j] = {'mean': mean_matrix, 'std': std_matrix}
+    return statistics
+
+
+def compute_train_statistics(original_data, optimizer, lr, bs, epoch):
+    original_matrices_path = f'experiments/matrices/{original_data}/{optimizer}/{lr}/{bs}/{epoch}/'
+    original_matrices_paths = find_matrices(original_matrices_path)
+
+    statistics = compute_statistics(original_matrices_paths)
+
+    # Convert tensors to lists (or numbers) for JSON serialization
+    for subfolder, stats in statistics.items():
+        for key, tensor in stats.items():
+            if tensor.numel() == 1:  # If the tensor has only one element, convert to a Python scalar
+                stats[key] = tensor.item()
+            else:  # Otherwise, convert to a list
+                stats[key] = tensor.tolist()
+
+    with open(original_matrices_path + 'matrix_statistics.json', 'w') as json_file:
+        json.dump(statistics, json_file, indent=4)

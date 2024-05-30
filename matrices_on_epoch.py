@@ -1,13 +1,7 @@
-import sys
 import argparse
 from mlp_study_exp import Experiment
-from test_ellipsoids import compute_train_statistics
+from useful_functions import compute_train_statistics
 from manual_training import DEFAULT_TRAININGS
-
-#  We compute num_samples per class
-#NUM_SAMPLES_PER_CLASS = 500
-# The number of cpus, which is the same as job arrays, is equal to num_samples // size_of_chunk_id
-#CHUNK_SIZE = 100
 
 
 def parse_args(parser=None):

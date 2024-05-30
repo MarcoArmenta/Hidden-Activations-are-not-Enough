@@ -200,13 +200,12 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
 
         reject_at = zeros.mean().item() - std*zeros.std().item()
 
-        if reject_at <= 0:
-            ValueError("Rejection level is less or equal than 0")
-            return
-
         with open(reject_path, 'w') as json_file:
             json.dump([reject_at], json_file, indent=4)
 
+    if reject_at <= 0:
+        ValueError("Rejection level is less or equal than 0")
+        return
     print(f"Will reject when 'zero dims' < {reject_at}.")
     adv_succes = [] # Save 10 adversarial examples that were not detected
     results = []  # (Rejected, Was attacked)
