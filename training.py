@@ -1,53 +1,11 @@
 import os
 import argparse
 import json
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import torchvision
-import torchvision.transforms as transforms
-
-from mlp import MLP
-
-DEFAULT_TRAININGS = {
-    'experiment_0': {
-        'dataset': 'mnist',
-        'optimizer': 'sgd',
-        'lr': 0.01,
-        'batch_size': 8,
-        'epoch': 21,
-        'reduce_lr_each': 5,
-        'save_every': 2
-    },
-    'experiment_1': {
-        'optimizer': 'momentum',
-        'dataset': 'mnist',
-        'lr': 0.01,
-        'batch_size': 32,
-        'epoch': 11,
-        'reduce_lr_each': 5,
-        'save_every': 2
-    },
-    'experiment_2': {
-        'optimizer': 'adam',
-        'dataset': 'fashion',
-        'lr': 1e-06,
-        'batch_size': 16,
-        'epoch': 51,
-        'reduce_lr_each': 20,
-        'save_every': 10
-    },
-    'experiment_3': {
-        'optimizer': 'sgd',
-        'dataset': 'fashion',
-        'lr': 0.1,
-        'batch_size': 16,
-        'epoch': 51,
-        'reduce_lr_each': 20,
-        'save_every': 10
-    }
-}
+from utils.utils import get_architecture, get_dataset
+from __init__ import DEFAULT_TRAININGS
 
 
 def parse_args(parser=None):
@@ -98,16 +56,9 @@ def parse_args(parser=None):
     parser.add_argument(
         "--default_hyper_parameters",
         action='store_true',
-        help="If True, trains one of the default models."
+        help="If not called, trains one of the default models."
              f"{DEFAULT_TRAININGS}",
     )
-    #parser.add_argument(
-    #    "--default_hyper_parameters",
-    #    type=bool,
-    #    default=True,
-    #    help="If True, trains one of the default models."
-    #         f"{DEFAULT_TRAININGS}",
-    #)
     parser.add_argument(
         "--default_index",
         type=int,
@@ -115,30 +66,6 @@ def parse_args(parser=None):
         help="The index of the default model to train."
     )
     return parser.parse_args()
-
-
-def get_architecture(input_shape=(1, 28, 28), num_classes=10):
-    model = MLP(input_shape=input_shape,
-                num_classes=num_classes,
-                hidden_sizes=(500, 500, 500, 500, 500),
-                bias=True
-                )
-    return model
-
-
-def get_dataset(data_set):
-    transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
-    if data_set == 'mnist':
-        train_set = torchvision.datasets.MNIST(root='./data', train=True, transform=transform, download=True)
-        test_set = torchvision.datasets.MNIST(root='./data', train=False, transform=transform, download=True)
-        return train_set, test_set
-    elif data_set == 'fashion':
-        train_set = torchvision.datasets.FashionMNIST(root='./data', train=True, transform=transform, download=True)
-        test_set = torchvision.datasets.FashionMNIST(root='./data', train=False, transform=transform, download=True)
-        return train_set, test_set
-    else:
-        print(f"Dataset {data_set} not supported...")
-        exit(1)
 
 
 if __name__ == '__main__':
@@ -188,8 +115,6 @@ if __name__ == '__main__':
 
     train_dataset, test_dataset = get_dataset(dataset)
     os.makedirs(f'experiments/datasets/{dataset}/', exist_ok=True)
-    #torch.save(train_dataset, f'experiments/datasets/{dataset}/train_dataset.pt')
-    #torch.save(test_dataset, f'experiments/datasets/{dataset}/test_dataset.pt')
 
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)

@@ -1,7 +1,9 @@
 import argparse
-from mlp_study_exp import Experiment
-from useful_functions import compute_train_statistics
-from manual_training import DEFAULT_TRAININGS
+from multiprocessing import Pool
+
+from matrix_construction.matrix_construction import MatrixConstruction
+from utils.utils import compute_train_statistics
+from __init__ import DEFAULT_TRAININGS
 
 
 def parse_args(parser=None):
@@ -61,12 +63,19 @@ def parse_args(parser=None):
         default=100,
         help="Number of matrices to compute at a time for parallelization",
     )
+    parser.add_argument(
+        "--nb_workers",
+        type=int,
+        default=8,
+        help="Number of threads for parallel computation",
+    )
 
     return parser.parse_args()
 
 
-def run_experiment_values(exp, chunk_id, chunk_size, root, epoch=100, train=True):
-    exp.values_on_epoch(root=root, chunk_id=chunk_id, chunk_size=chunk_size, epoch=epoch, train=train)
+def compute_matrices(exp, chunk_id):
+    exp.values_on_epoch(chunk_id=chunk_id,
+                        train=True)
 
 
 if __name__ == '__main__':
@@ -77,7 +86,6 @@ if __name__ == '__main__':
     chunk_size = args.chunk_size
 
     if args.default_training:
-        print('loading..')
         index = args.default_index
         experiment = DEFAULT_TRAININGS[f'experiment_{index}']
 
@@ -102,24 +110,17 @@ if __name__ == '__main__':
                 "save_path": save_path,
                 "device": device,
                 "data name": dataset,
-                'num_samples': num_samples}
+                'num_samples': num_samples,
+                'chunk_size': chunk_size,
+                }
 
-    exp = Experiment(dict_exp)
-
-    def compute_matrices(chunk_id, train=True):
-        run_experiment_values(exp,
-                              chunk_id=chunk_id,
-                              root=save_path,
-                              chunk_size=chunk_size,
-                              epoch=epoch,
-                              train=train)
-
+    exp = MatrixConstruction(dict_exp)
     chunks = list(range(num_samples//chunk_size))
+    arguments = list(zip([exp for _ in range(len(chunks))], chunks))
 
-    for chunk in chunks:
-        compute_matrices(chunk)
-
-    print(f"Matrices constructed.", flush=True)
+    print(f"Computing matrices...", flush=True)
+    with Pool(processes=args.nb_workers) as pool:
+        results = pool.starmap(compute_matrices, arguments)
 
     print('Computing matrix statistics', flush=True)
     compute_train_statistics(dataset, optimizer_name, lr, batch_size, epoch)

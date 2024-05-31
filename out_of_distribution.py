@@ -1,16 +1,14 @@
-import os
 import json
 import torch
 import torchvision
 import torchvision.transforms as transforms
-import matplotlib.pyplot as plt
 import numpy.random as rand
 import argparse
 
 from representation import MlpRepresentation
-from data_mod import get_ellipsoid_data, is_in_ellipsoid, zero_std, get_model, subset
+from utils.utils import get_ellipsoid_data, is_in_ellipsoid, zero_std, get_model, subset
 
-from manual_training import DEFAULT_TRAININGS
+from __init__ import DEFAULT_TRAININGS
 
 
 def parse_args(parser=None):

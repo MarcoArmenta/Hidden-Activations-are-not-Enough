@@ -1,5 +1,4 @@
-from mlp import *
-from useful_functions import *
+from model_zoo.mlp import *
 
 
 class MlpRepresentation:

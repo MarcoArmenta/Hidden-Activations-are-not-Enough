@@ -14,9 +14,9 @@ import argparse
 from multiprocessing import Pool
 
 from representation import MlpRepresentation
-from data_mod import get_ellipsoid_data, zero_std, get_model, subset
+from utils.utils import get_ellipsoid_data, zero_std, get_model, subset
 
-from manual_training import DEFAULT_TRAININGS
+from training import DEFAULT_TRAININGS
 
 
 def apply_attack(args):
@@ -226,7 +226,9 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
         results.append(res)
 
     torch.save(adv_succes,
-               'experiments/adversarial_examples/' + experiment_path + f'/adv_success_{num_samples_rejection_level}_{std}_{d1}_{d2}.pth')
+               'experiments/adversarial_examples/'
+               + experiment_path +
+               f'/adv_success_{num_samples_rejection_level}_{std}_{d1}_{d2}.pth')
 
     good_defence = 0
     wrongly_rejected = 0
