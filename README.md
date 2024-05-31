@@ -2,7 +2,7 @@
 
 Run the following scripts in order
 
-`manual_training.py'
+`training.py'
 
 `matrices_on_epoch.py'
 
