@@ -1,5 +1,5 @@
 """
-    Creates adversarial examples and checks if it's within the ellipsoid
+    Creates adversarial examples and tries to detect them using matrix statistics
 """
 
 import os
@@ -8,15 +8,13 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 import torchattacks
-import matplotlib.pyplot as plt
 import numpy.random as rand
 import argparse
 from multiprocessing import Pool
 
-from representation import MlpRepresentation
+from matrix_construction.representation import MlpRepresentation
 from utils.utils import get_ellipsoid_data, zero_std, get_model, subset
-
-from training import DEFAULT_TRAININGS
+from __init__ import DEFAULT_TRAININGS
 
 
 def apply_attack(args):
@@ -67,10 +65,10 @@ def parse_args(parser=None):
         help="Size of data subset to .",
     )
     parser.add_argument(
-        "--default_training",
-        type=bool,
-        default=True,
-        help="Wether to use a default trained network.",
+        "--default_hyper_parameters",
+        action='store_true',
+        help="If not called, computes matrices on a default network from:"
+             f"{DEFAULT_TRAININGS}",
     )
     parser.add_argument(
         "--default_index",
@@ -243,20 +241,9 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
     print(f"Percentage of wrong rejections: {wrongly_rejected/(len(results)-num_att)}")
 
 
-def show_adv_img(img: torch.Tensor) -> None:
-    _, axes = plt.subplots(1, 2, figsize=(15, 15))
-
-    axes[0].imshow(img[0], cmap='gray')
-    #axes[0].set_title(f"Label: {label}")
-    #axes[1].imshow(attacked_img[0], cmap='gray')
-    #axes[1].set_title(f"Attack: {attack}. Output: {output}")
-    for i in range(2): axes[i].axis("off")
-    plt.show()
-
-
 if __name__ == "__main__":
     args = parse_args()
-    if args.default_training:
+    if args.default_hyper_parameters:
         index = args.default_index
         experiment = DEFAULT_TRAININGS[f'experiment_{index}']
 
@@ -275,8 +262,14 @@ if __name__ == "__main__":
 
     experiment_path = f'{dataset}/{optimizer_name}/{lr}/{batch_size}'
     print("Experiment: ", experiment_path)
-    matrices_path = 'experiments/matrices/' + experiment_path + f'/{epoch}/'
+
     weights_path = 'experiments/weights/' + experiment_path + f'/epoch_{epoch}.pth'
+    if not os.path.exists(weights_path + f'epoch_{epoch}.pth'):
+        ValueError(f"Experiment needs to be trained with hyperparameters: {weights_path}")
+
+    matrices_path = 'experiments/matrices/' + experiment_path + f'/{epoch}/matrix_statistics.json'
+    if not os.path.exists(weights_path + f'epoch_{epoch}.pth'):
+        ValueError(f"Matrix statistics have to be computed with hyperparameters: {weights_path}")
 
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
     if dataset == "mnist":
@@ -286,10 +279,10 @@ if __name__ == "__main__":
         train_set = torchvision.datasets.FashionMNIST(root='./data', train=True, transform=transform, download=True)
         test_set = torchvision.datasets.FashionMNIST(root='./data', train=False, transform=transform, download=True)
 
-    representation = MlpRepresentation(get_model(weights_path))
-    ellipsoids_file = open(f"{matrices_path}/matrix_statistics.json")
-    ellipsoids: dict = json.load(ellipsoids_file)
     model = get_model(weights_path)
+    representation = MlpRepresentation(model)
+    ellipsoids_file = open(matrices_path)
+    ellipsoids: dict = json.load(ellipsoids_file)
 
     # Make set of images for experiment
     exp_dataset_train, exp_labels_train = subset(train_set, args.subset_size)
@@ -306,9 +299,3 @@ if __name__ == "__main__":
                              std=args.std,
                              d1=args.d1,
                              d2=args.d2)
-
-    #adv_success = 'experiments/adversarial_examples/' + experiment_path + f'/adv_success_{args.subset_size//2}_{args.std}_{args.d1}_{args.d2}.pth'
-    #if os.path.exists(adv_success):
-    #    im = torch.load(adv_success)
-    #    for i in range(len(im)):
-    #        show_adv_img(im[i].detach().numpy())

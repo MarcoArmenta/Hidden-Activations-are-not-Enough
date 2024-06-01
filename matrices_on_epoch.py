@@ -1,3 +1,7 @@
+"""
+    This script computes matrices for a subset of a dataset for a neural network trained with specific hyperparameters.
+"""
+import os
 import argparse
 from multiprocessing import Pool
 
@@ -37,13 +41,13 @@ def parse_args(parser=None):
         "--epoch",
         type=str,
         default=0,
-        help="The number of epochs to train.",
+        help="The epoch at which to compute matrices.",
     )
     parser.add_argument(
-        "--default_training",
-        type=bool,
-        default=True,
-        help="Wether to use a default trained network.",
+        "--default_hyper_parameters",
+        action='store_true',
+        help="If not called, computes matrices on a default network from:"
+             f"{DEFAULT_TRAININGS}",
     )
     parser.add_argument(
         "--default_index",
@@ -85,8 +89,9 @@ if __name__ == '__main__':
     num_samples = args.num_samples_per_class
     chunk_size = args.chunk_size
 
-    if args.default_training:
+    if args.default_hyper_parameters:
         index = args.default_index
+        print(f"Loading default experiment {index}.")
         experiment = DEFAULT_TRAININGS[f'experiment_{index}']
 
         optimizer_name = experiment['optimizer']
@@ -96,6 +101,7 @@ if __name__ == '__main__':
         epoch = experiment['epoch']-1
 
     else:
+        print("Loading")
         optimizer_name = args.optimizer
         dataset = args.dataset
         lr = args.lr
@@ -103,13 +109,17 @@ if __name__ == '__main__':
         epoch = args.epoch-1
 
     weights_path = f'experiments/weights/{dataset}/{optimizer_name}/{lr}/{batch_size}/'
+
+    if not os.path.exists(weights_path + f'epoch_{epoch}.pth'):
+        ValueError(f"Experiment needs to be trained with hyperparameters: {weights_path}")
+
     save_path = f'experiments/matrices/{dataset}/{optimizer_name}/{lr}/{batch_size}/'
 
     dict_exp = {"epochs": epoch,
                 "weights_path": weights_path,
                 "save_path": save_path,
                 "device": device,
-                "data name": dataset,
+                "data_name": dataset,
                 'num_samples': num_samples,
                 'chunk_size': chunk_size,
                 }

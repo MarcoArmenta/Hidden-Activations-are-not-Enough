@@ -3,6 +3,7 @@ import torch
 import json
 import torchvision
 from torchvision import transforms
+
 from model_zoo.mlp import MLP
 
 
@@ -30,11 +31,18 @@ def get_dataset(data_set):
         exit(1)
 
 
-# Function to accurately locate matrix.pt files
+def get_model(path: str):
+    weight_path = torch.load(path, map_location=torch.device('cpu'))
+    model = get_architecture()
+    model.load_state_dict(weight_path)
+    return model
+
+
+# Function to accurately locate matrix.pt files for training data
 def find_matrices(base_dir):
     matrix_paths = {}
     for j in range(10):  # Considering subfolders '0' to '9'
-        matrices_path = os.path.join(base_dir, str(j), 'train')
+        matrices_path = os.path.join(base_dir, str(j), 'train')  # Only use training data
         if os.path.exists(matrices_path):
             for i in os.listdir(matrices_path):  # Iterating through each 'i' subdirectory
                 matrix_file_path = os.path.join(matrices_path, i, 'matrix.pt')
@@ -91,8 +99,8 @@ def get_ellipsoid_data(ellipsoids: dict, result: torch.Tensor, param: str) -> to
     """
 
     :param: ellipsoids: matrix statistics dictionary with keys the classes and mean and std
-    :param: result
-    :param: ellipsoids
+    :param: result:     predicted class by the model
+    :param: ellipsoids: ellipsoids per class
 
     """
     return torch.Tensor(ellipsoids[str(result.item())][param])
@@ -112,13 +120,6 @@ def zero_std(matrix: torch.Tensor,
              ellipsoid_std: torch.Tensor,
              d1: float=0) -> torch.LongTensor:
     return torch.count_nonzero(torch.logical_and((ellipsoid_std <= d1), (matrix > d1)))  # ¬(P => Q) <==> P ∧ ¬Q
-
-
-def get_model(path: str):
-    weight_path = torch.load(path, map_location=torch.device('cpu'))
-    model = get_architecture()
-    model.load_state_dict(weight_path)
-    return model
 
 
 def subset(train_set, length: int, input_shape=(1, 28, 28)):

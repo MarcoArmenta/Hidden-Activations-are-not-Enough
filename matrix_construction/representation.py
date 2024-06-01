@@ -1,3 +1,7 @@
+"""
+    Given an MLP it constructs a quiver representation with the bias and weights, and computes with the forward method
+    a matrix obtained by multiplying all matrices in the induced quiver representation W_x^f
+"""
 from model_zoo.mlp import *
 
 
@@ -44,7 +48,7 @@ class MlpRepresentation:
         a = self.mlp_biases[0]
 
         for i in range(1, len(self.mlp_weights)):
-            layeri = self.mlp_weights[i].to(self.device)
+            layer = self.mlp_weights[i].to(self.device)
 
             pre_act = self.model.pre_acts[i-1]
             post_act = self.model.acts[i-1]
@@ -52,7 +56,7 @@ class MlpRepresentation:
             vertices = post_act / pre_act
             vertices[torch.isnan(vertices) | torch.isinf(vertices)] = 0.0
 
-            B = layeri * vertices
+            B = layer * vertices
             A = torch.matmul(B, A)
 
             if self.model.bias or self.model.batch_norm:

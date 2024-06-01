@@ -4,6 +4,7 @@ import json
 import torch
 import torch.nn as nn
 import torch.optim as optim
+
 from utils.utils import get_architecture, get_dataset
 from __init__ import DEFAULT_TRAININGS
 
@@ -73,6 +74,7 @@ if __name__ == '__main__':
     args = parse_args()
 
     if args.default_hyper_parameters:
+        print(f'Training default model {index}')
         index = args.default_index
         experiment = DEFAULT_TRAININGS[f'experiment_{index}']
 
@@ -85,6 +87,7 @@ if __name__ == '__main__':
         reduce_lr = experiment['reduce_lr_each']
 
     else:
+        print(f'Training costum model')
         optimizer_name = args.optimizer
         dataset = args.dataset
         lr = args.lr

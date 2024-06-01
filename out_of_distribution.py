@@ -5,7 +5,7 @@ import torchvision.transforms as transforms
 import numpy.random as rand
 import argparse
 
-from representation import MlpRepresentation
+from matrix_construction.representation import MlpRepresentation
 from utils.utils import get_ellipsoid_data, is_in_ellipsoid, zero_std, get_model, subset
 
 from __init__ import DEFAULT_TRAININGS

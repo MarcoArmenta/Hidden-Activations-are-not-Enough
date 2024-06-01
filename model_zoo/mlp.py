@@ -1,3 +1,7 @@
+"""
+    Simple MLP model that allows bias, residual connections and batch norm layers.
+    It allows to save activations and pre-activations in order for computation of quiver representations.
+"""
 import torch
 import torch.nn as nn
 
@@ -29,10 +33,12 @@ class MLP(nn.Module):
         self.num_layers = len(self.layers_size) + 2
         
         self.residual = residual
-        self.save = save
         self.bias = bias
         self.batch_norm = batch_norm
-        self.count = 0
+
+        self.save = save
+        self.pre_acts = []
+        self.acts = []
 
         self.layers = nn.ModuleList()
         

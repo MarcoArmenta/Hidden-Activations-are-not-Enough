@@ -1,14 +1,27 @@
+"""
+    This script contains functions for computing several matrices from neural networks in parallel.
+"""
 import os
 import torch
 from torch.utils.data import DataLoader, Subset
 
 from model_zoo.mlp import MLP
-from representation import MlpRepresentation
-from training import get_architecture
-from training import get_dataset
+from matrix_construction.representation import MlpRepresentation
+from utils.utils import get_architecture, get_dataset
 
 
-def compute_chunk_of_matrices(data, representation, epoch: int, clas, train=True, chunk_size=10, save_path=None, chunk_id=0) -> None:
+def compute_chunk_of_matrices(data: torch.Tensor,
+                              representation: MLP,
+                              epoch: int,
+                              clas: int,
+                              train=True,
+                              chunk_size=10,
+                              save_path=None,
+                              chunk_id=0) -> None:
+    """
+    Given a subset of data and an MlpRepresentation, it computes and saves accordingly
+    the induced matrices in the corresponding chunk of samples in data
+    """
     if save_path is not None:
         directory = save_path + '/' + str(epoch) + '/' + str(clas) + '/'
 
@@ -42,7 +55,7 @@ class MatrixConstruction:
     def __init__(self, dict_exp) -> None:
         self.epochs: int = dict_exp["epochs"]
         self.num_samples: int = dict_exp["num_samples"]
-        self.dataname: str = dict_exp["data name"].lower()
+        self.dataname: str = dict_exp["data_name"].lower()
         self.weights_path = dict_exp["weights_path"]
         self.device: str = dict_exp["device"]
         self.chunk_size = dict_exp['chunk_size']
