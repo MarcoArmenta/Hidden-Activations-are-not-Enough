@@ -91,7 +91,7 @@ if __name__ == '__main__':
 
     if args.default_hyper_parameters:
         index = args.default_index
-        print(f"Loading default experiment {index}.")
+        print(f"Loading experiment default {index}.")
         experiment = DEFAULT_TRAININGS[f'experiment_{index}']
 
         optimizer_name = experiment['optimizer']
@@ -101,19 +101,19 @@ if __name__ == '__main__':
         epoch = experiment['epoch']-1
 
     else:
-        print("Loading")
+        print("Loading custom experiment.")
         optimizer_name = args.optimizer
         dataset = args.dataset
         lr = args.lr
         batch_size = args.batch_size
         epoch = args.epoch-1
 
-    weights_path = f'experiments/weights/{dataset}/{optimizer_name}/{lr}/{batch_size}/'
+    weights_path = f'experiments/weights/{dataset}/{optimizer_name}/{lr}/{batch_size}'
 
     if not os.path.exists(weights_path + f'epoch_{epoch}.pth'):
-        ValueError(f"Experiment needs to be trained with hyperparameters: {weights_path}")
+        ValueError(f"Experiment needs to be trained with hyper-parameters: {weights_path}")
 
-    save_path = f'experiments/matrices/{dataset}/{optimizer_name}/{lr}/{batch_size}/'
+    save_path = f'experiments/matrices/{dataset}/{optimizer_name}/{lr}/{batch_size}'
 
     dict_exp = {"epochs": epoch,
                 "weights_path": weights_path,

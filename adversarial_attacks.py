@@ -20,8 +20,8 @@ from __init__ import DEFAULT_TRAININGS
 def apply_attack(args):
     attack_name, attack, data, labels = args
     result = (attack_name, attack(data, labels))
-    print(f"Attack: {attack_name}")
-    print(f"Number of attacks: {len(result[1])}")
+    #print(f"Attack: {attack_name}")
+    #print(f"Number of attacks: {len(result[1])}")
 
     return result
 
@@ -114,11 +114,12 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
                              num_samples_rejection_level: int = 5000,
                              std: float = 2,
                              d1: float = 0.1,
-                             d2: float = 0.1) -> None:
+                             d2: float = 0.1,
+                             nb_workers: int = 1) -> None:
 
-    attacks = ["GN", "FGSM", "RFGSM", "PGD", "EOTPGD", "FFGSM", "TPGD", "MIFGSM", "UPGD", "DIFGSM",
-           "NIFGSM", "PGDRS", "SINIFGSM", "VMIFGSM", "VNIFGSM", "CW", "PGDL2", "PGDRSL2", "DeepFool", "SparseFool",
-           "OnePixel", "Pixle", "FAB"]
+    attacks = ["GN", "FGSM", "RFGSM", "PGD", "EOTPGD", "FFGSM", "TPGD", "MIFGSM", "UPGD", "DIFGSM", "NIFGSM",
+               "PGDRS", "SINIFGSM", "VMIFGSM", "VNIFGSM", "CW", "PGDL2", "PGDRSL2", "DeepFool", "SparseFool",
+               "OnePixel", "Pixle", "FAB"]
 
     attacks_cls = dict(zip(["None"]+attacks,
                            [torchattacks.VANILA(model),
@@ -128,25 +129,23 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
                             torchattacks.PGD(model),
                             torchattacks.EOTPGD(model),
                             torchattacks.FFGSM(model),
-
                             torchattacks.TPGD(model),
                             torchattacks.MIFGSM(model),
                             torchattacks.UPGD(model),
-
                             torchattacks.DIFGSM(model),
                             torchattacks.Jitter(model),
                             torchattacks.NIFGSM(model),
+
                             torchattacks.PGDRS(model),
                             torchattacks.SINIFGSM(model),
-
                             torchattacks.VMIFGSM(model),
                             torchattacks.VNIFGSM(model),
                             torchattacks.CW(model),
                             torchattacks.PGDL2(model),
                             torchattacks.PGDRSL2(model),
-
                             torchattacks.DeepFool(model),
                             torchattacks.SparseFool(model),
+
                             torchattacks.OnePixel(model),
                             torchattacks.Pixle(model),
                             torchattacks.FAB(model),
@@ -167,13 +166,13 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
                      for a in ["None"] + attacks
                      ]
 
-        with Pool(processes=8) as pool:
+        with Pool(processes=nb_workers) as pool:
             results = pool.map(apply_attack, arguments)
 
         attacked_dataset = dict(results)
         if not os.path.exists('experiments/adversarial_examples/' + experiment_path + ''):
             os.makedirs('experiments/adversarial_examples/' + experiment_path + '/')
-        #attacked_dataset = {a: attacks_cls[a](exp_dataset_test[num_samples_rejection_level:], exp_labels_test[num_samples_rejection_level:]) for a in ["None"]+attacks}
+
         torch.save(attacked_dataset, path_adv_examples)
 
     # Compute mean and std of number of (almost) zero dims
@@ -202,26 +201,48 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
             json.dump([reject_at], json_file, indent=4)
 
     if reject_at <= 0:
-        ValueError("Rejection level is less or equal than 0")
+        print(f"Rejection level is {reject_at}")
         return
+
     print(f"Will reject when 'zero dims' < {reject_at}.")
-    adv_succes = [] # Save 10 adversarial examples that were not detected
+    adv_succes = []  # Save adversarial examples that were not detected
     results = []  # (Rejected, Was attacked)
-    for i in range(len(exp_dataset_test[num_samples_rejection_level:])):
-        a = rand.choice(["None"]+attacks, p=[0.5]+[1/(2*len(attacks)) for _ in attacks])
-        im = attacked_dataset[a][i]
-        pred = torch.argmax(model.forward(im))
-        mat = representation.forward(im)
 
-        b = get_ellipsoid_data(ellipsoids, pred, "std")
-        c = zero_std(mat, b, d2).item()
+    counts = {key: 0 for key in ["None"] + attacks}
+    m = len(exp_dataset_test[num_samples_rejection_level:])
 
-        res = ((reject_at > c), (a != "None"))
+    for a in ["None"]+attacks:
+        for i in range(m):
+            #a = rand.choice(["None"]+attacks, p=[0.5]+[1/(2*len(attacks)) for _ in attacks])
+            im = attacked_dataset[a][i]
+            pred = torch.argmax(model.forward(im))
+            mat = representation.forward(im)
 
-        if not res[0] and len(adv_succes) < 10 and a != "None":
-            adv_succes.append(im)
+            b = get_ellipsoid_data(ellipsoids, pred, "std")
+            c = zero_std(mat, b, d2).item()
 
-        results.append(res)
+            res = ((reject_at > c), (a != "None"))
+
+            # if not rejected and it was an attack
+            if not res[0] and a != "None":
+                counts[a] += 1
+                adv_succes.append(im)
+
+            # if rejected and it was test data
+            if res[0] and a == "None":
+                counts[a] += 1
+
+            results.append(res)
+
+    for a in ["None"] + attacks:
+        counts[a] /= m
+
+    # Specify the file path
+    probs = 'experiments/adversarial_examples/' + experiment_path + f'/probabilities-per-attack_{num_samples_rejection_level}_{std}_{d1}_{d2}.json'
+
+    # Save the dictionary to a JSON file
+    with open(probs, 'w') as json_file:
+        json.dump(counts, json_file, indent=4)  # indent=4 is optional, for pretty printing
 
     torch.save(adv_succes,
                'experiments/adversarial_examples/'
@@ -265,11 +286,11 @@ if __name__ == "__main__":
 
     weights_path = 'experiments/weights/' + experiment_path + f'/epoch_{epoch}.pth'
     if not os.path.exists(weights_path + f'epoch_{epoch}.pth'):
-        ValueError(f"Experiment needs to be trained with hyperparameters: {weights_path}")
+        ValueError(f"Experiment needs to be trained with hyper-parameters: {weights_path}")
 
     matrices_path = 'experiments/matrices/' + experiment_path + f'/{epoch}/matrix_statistics.json'
     if not os.path.exists(weights_path + f'epoch_{epoch}.pth'):
-        ValueError(f"Matrix statistics have to be computed with hyperparameters: {weights_path}")
+        ValueError(f"Matrix statistics have to be computed with hyper-parameters: {matrices_path}")
 
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
     if dataset == "mnist":
@@ -298,4 +319,5 @@ if __name__ == "__main__":
                              num_samples_rejection_level=args.subset_size//2,
                              std=args.std,
                              d1=args.d1,
-                             d2=args.d2)
+                             d2=args.d2,
+                             nb_workers=args.nb_workers)

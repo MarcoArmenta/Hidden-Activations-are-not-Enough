@@ -74,8 +74,9 @@ if __name__ == '__main__':
     args = parse_args()
 
     if args.default_hyper_parameters:
-        print(f'Training default model {index}')
         index = args.default_index
+        print(f'Training default model {index}')
+
         experiment = DEFAULT_TRAININGS[f'experiment_{index}']
 
         optimizer_name = experiment['optimizer']
@@ -87,7 +88,7 @@ if __name__ == '__main__':
         reduce_lr = experiment['reduce_lr_each']
 
     else:
-        print(f'Training costum model')
+        print(f'Training custom model')
         optimizer_name = args.optimizer
         dataset = args.dataset
         lr = args.lr
@@ -97,6 +98,7 @@ if __name__ == '__main__':
         reduce_lr = args.reduce_lr_each
 
     dir = f"experiments/weights/{dataset}/{optimizer_name}/{lr}/{batch_size}/"
+    print(f"Training: {dir}")
     if os.path.exists(dir + 'results.json'):
         print(f"Experiment '{dir}' exists.")
         exit(1)

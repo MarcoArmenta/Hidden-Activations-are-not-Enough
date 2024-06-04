@@ -53,7 +53,7 @@ def compute_chunk_of_matrices(data: torch.Tensor,
 
 class MatrixConstruction:
     def __init__(self, dict_exp) -> None:
-        self.epochs: int = dict_exp["epochs"]
+        self.epoch: int = dict_exp["epochs"]
         self.num_samples: int = dict_exp["num_samples"]
         self.dataname: str = dict_exp["data_name"].lower()
         self.weights_path = dict_exp["weights_path"]
@@ -64,7 +64,7 @@ class MatrixConstruction:
         self.num_classes = 10
         self.data = get_dataset(self.dataname)
 
-    def compute_matrices_epoch_on_dataset(self, model: MLP, epoch: int, chunk_id: int, train=True) -> None:
+    def compute_matrices_epoch_on_dataset(self, model: MLP, chunk_id: int, train=True) -> None:
         if train:
             dataset = self.data[0]
         else:
@@ -86,22 +86,22 @@ class MatrixConstruction:
 
             compute_chunk_of_matrices(x_train,
                                       representation,
-                                      epoch,
+                                      self.epoch,
                                       i,
                                       train=train,
                                       save_path=self.save_path,
                                       chunk_id=chunk_id,
                                       chunk_size=self.chunk_size)
 
-    def values_on_epoch(self, chunk_id: int, epoch: int = 10, train=True) -> None:
+    def values_on_epoch(self, chunk_id: int, train=True) -> None:
         path = os.getcwd()
         directory = f"{self.weights_path}"
         new_path = os.path.join(path, directory)
-        model_file = f'epoch_{epoch}.pth'
+        model_file = f'epoch_{self.epoch}.pth'
         model_path = os.path.join(new_path, model_file)
         state_dict = torch.load(model_path, map_location=torch.device('cpu'))
 
         model = get_architecture()
         model.load_state_dict(state_dict)
 
-        self.compute_matrices_epoch_on_dataset(model, epoch, chunk_id=chunk_id, train=train)
+        self.compute_matrices_epoch_on_dataset(model, chunk_id=chunk_id, train=train)
