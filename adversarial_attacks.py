@@ -74,7 +74,7 @@ def parse_args(parser=None):
     parser.add_argument(
         "--subset_size",
         type=int,
-        default=1000,
+        default=10000,
         help="Size of data subset to .",
     )
     parser.add_argument(
@@ -122,14 +122,15 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
                              exp_labels_test: torch.Tensor,
                              representation,
                              ellipsoids: dict,
-                             model,
                              experiment_path,
                              num_samples_rejection_level: int = 5000,
                              std: float = 2,
                              d1: float = 0.1,
                              d2: float = 0.1,
                              nb_workers: int = 1,
-                             verbose: bool = False) -> None:
+                             verbose: bool = True) -> None:
+
+    model = representation.model
 
     attacks = ["GN", "FGSM", "RFGSM", "PGD", "EOTPGD", "FFGSM", "TPGD", "MIFGSM", "UPGD", "DIFGSM", "NIFGSM",
                "PGDRS", "SINIFGSM", "VMIFGSM", "VNIFGSM", "CW", "PGDL2", "PGDRSL2", "DeepFool", "SparseFool",
@@ -176,7 +177,7 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
                       attacks_cls[a],
                       exp_dataset_test[num_samples_rejection_level:].detach(),
                       exp_labels_test[num_samples_rejection_level:].detach(),
-                      representation.model
+                      model
                       )
                      for a in ["None"] + attacks
                      ]
@@ -234,11 +235,14 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
     results = []  # (Rejected, Was attacked)
 
     counts = {key: 0 for key in ["None"] + attacks}
-    min_length = min(len(attacked_dataset[a]) for a in ["None"]+attacks)
-    print("Minimal length of adversarial examples: ", min_length)
+    # = min(len(attacked_dataset[a]) for a in ["None"]+attacks)
+    #print("Minimal length of adversarial examples: ", min_length)
 
     for a in ["None"]+attacks:
-        for i in range(min_length):
+        false = 0
+        true = 0
+        defe = 0
+        for i in range(len(attacked_dataset[a])):
             im = attacked_dataset[a][i]
             pred = torch.argmax(model.forward(im))
             mat = representation.forward(im)
@@ -250,39 +254,28 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
 
             # if not rejected and it was an attack
             if not res[0] and a != "None":
+                false += 1
                 counts[a] += 1
                 adv_succes.append(im)
 
+            # if rejected and it was an attack
+            if res[0] and a != 'None':
+                defe += 1
+
             # if rejected and it was test data
             if res[0] and a == "None":
+                true += 1
                 counts[a] += 1
 
             results.append(res)
 
-    # Convert counts to tensor for faster operations
-    counts_tensor = torch.tensor([counts[key] for key in ["None"] + attacks], dtype=torch.float)
+        if verbose:
+            print("Method: ", a)
+            if a == 'None':
+                print(f'Wrong rejection! : {true} out of {len(attacked_dataset[a])}')
 
-    # Get the number of attacked samples per attack type
-    num_attacked_samples = torch.tensor([len(attacked_dataset[key]) for key in ["None"] + attacks],
-                                        dtype=torch.float)
-
-    # Perform element-wise division
-    normalized_counts = counts_tensor / num_attacked_samples
-
-    # Convert the normalized counts back to the dictionary format
-    counts = {key: normalized_counts[i].item() for i, key in enumerate(["None"] + attacks)}
-
-    # Specify the file path
-    probs = 'experiments/adversarial_examples/' + experiment_path + f'/probabilities-per-attack_{num_samples_rejection_level}_{std}_{d1}_{d2}.json'
-
-    # Save the dictionary to a JSON file
-    with open(probs, 'w') as json_file:
-        json.dump(counts, json_file, indent=4)  # indent=4 is optional, for pretty printing
-
-    torch.save(adv_succes,
-               'experiments/adversarial_examples/'
-               + experiment_path +
-               f'/adv_success_{num_samples_rejection_level}_{std}_{d1}_{d2}.pth')
+            print(f'Defence! : {defe} out of {len(attacked_dataset[a])}')
+            print(f'Attacked! : {false} out of {len(attacked_dataset[a])}')
 
     good_defence = 0
     wrongly_rejected = 0
@@ -295,6 +288,21 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
             wrongly_rejected += int(rej)
     print(f"Percentage of good defences: {good_defence/num_att}")
     print(f"Percentage of wrong rejections: {wrongly_rejected/(len(results)-num_att)}")
+
+    counts_tensor = torch.tensor([counts[key] for key in ["None"] + attacks], dtype=torch.float)
+    num_attacked_samples = torch.tensor([len(attacked_dataset[key]) for key in ["None"] + attacks], dtype=torch.float)
+    normalized_counts = counts_tensor / num_attacked_samples
+    probabilities = {key: normalized_counts[i].item() for i, key in enumerate(["None"] + attacks)}
+    probabilities['None'] = good_defence/num_att
+    probs = 'experiments/adversarial_examples/' + experiment_path + f'/prob-adv-success-per-attack_' \
+                                                                    f'{num_samples_rejection_level}_{std}_{d1}_{d2}.json'
+    with open(probs, 'w') as json_file:
+        json.dump(probabilities, json_file, indent=4)  # indent=4 is optional, for pretty printing
+
+    torch.save(adv_succes,
+               'experiments/adversarial_examples/'
+               + experiment_path +
+               f'/adv_success_{num_samples_rejection_level}_{std}_{d1}_{d2}.pth')
 
 
 if __name__ == "__main__":
@@ -352,7 +360,6 @@ if __name__ == "__main__":
                              representation,
                              ellipsoids,
                              experiment_path=experiment_path,
-                             model=model,
                              num_samples_rejection_level=args.subset_size//2,
                              std=args.std,
                              d1=args.d1,

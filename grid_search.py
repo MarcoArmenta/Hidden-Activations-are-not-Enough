@@ -29,8 +29,8 @@ def parse_args(parser=None):
     )
     parser.add_argument(
         "--default_index",
-        type=int,
-        default=0,
+        type=list,
+        default=[0, 1, 2, 3],
         help="The index for default experiment",
     )
     parser.add_argument(
@@ -112,7 +112,7 @@ if __name__ == "__main__":
     std_values = args.std_values
     d1_values = args.d1_values
     d2_values = args.d2_values
-    indexes = [args.default_index]
+    indexes = args.default_index
 
     param_grid = list(itertools.product(std_values, d1_values, d2_values, indexes))
 

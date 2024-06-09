@@ -58,15 +58,16 @@ def parse_args(parser=None):
     parser.add_argument(
         "--num_samples_per_class",
         type=int,
-        default=500,
+        default=5000,
         help="Number of data samples per class to compute matrices.",
     )
     parser.add_argument(
         "--chunk_size",
         type=int,
-        default=100,
+        default=625,
         help="Number of matrices to compute at a time for parallelization",
     )
+    # TODO: nb_workers = num_samples_per_class/chunk_size
     parser.add_argument(
         "--nb_workers",
         type=int,

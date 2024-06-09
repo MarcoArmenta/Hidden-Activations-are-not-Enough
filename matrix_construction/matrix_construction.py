@@ -31,7 +31,7 @@ def compute_chunk_of_matrices(data: torch.Tensor,
     directory += 'train/' if train else 'test/'
 
     if not os.path.exists(directory):
-        os.makedirs(directory)
+        os.makedirs(directory, exist_ok=True)
 
     data = data[chunk_id*chunk_size:(chunk_id+1)*chunk_size]
 
