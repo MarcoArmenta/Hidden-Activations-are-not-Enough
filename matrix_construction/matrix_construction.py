@@ -14,10 +14,10 @@ def compute_chunk_of_matrices(data: torch.Tensor,
                               representation: MLP,
                               epoch: int,
                               clas: int,
-                              train=True,
-                              chunk_size=10,
+                              train: bool = True,
+                              chunk_size: int = 10,
                               save_path=None,
-                              chunk_id=0) -> None:
+                              chunk_id: int = 0) -> None:
     """
     Given a subset of data and an MlpRepresentation, it computes and saves accordingly
     the induced matrices in the corresponding chunk of samples in data

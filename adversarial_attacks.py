@@ -239,9 +239,9 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
     #print("Minimal length of adversarial examples: ", min_length)
 
     for a in ["None"]+attacks:
-        false = 0
-        true = 0
-        defe = 0
+        not_rejected_and_attacked = 0
+        rejected_and_attacked = 0
+        rejected_and_not_attacked = 0
         for i in range(len(attacked_dataset[a])):
             im = attacked_dataset[a][i]
             pred = torch.argmax(model.forward(im))
@@ -254,17 +254,17 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
 
             # if not rejected and it was an attack
             if not res[0] and a != "None":
-                false += 1
+                not_rejected_and_attacked += 1
                 counts[a] += 1
                 adv_succes.append(im)
 
             # if rejected and it was an attack
             if res[0] and a != 'None':
-                defe += 1
+                rejected_and_attacked += 1
 
             # if rejected and it was test data
             if res[0] and a == "None":
-                true += 1
+                rejected_and_not_attacked += 1
                 counts[a] += 1
 
             results.append(res)
@@ -272,10 +272,10 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
         if verbose:
             print("Method: ", a)
             if a == 'None':
-                print(f'Wrong rejection! : {true} out of {len(attacked_dataset[a])}')
+                print(f'Wrong rejection! : {rejected_and_not_attacked} out of {len(attacked_dataset[a])}')
 
-            print(f'Defence! : {defe} out of {len(attacked_dataset[a])}')
-            print(f'Attacked! : {false} out of {len(attacked_dataset[a])}')
+            print(f'Defence! : {rejected_and_attacked} out of {len(attacked_dataset[a])}')
+            print(f'Attacked! : {not_rejected_and_attacked} out of {len(attacked_dataset[a])}')
 
     good_defence = 0
     wrongly_rejected = 0
@@ -293,7 +293,7 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
     num_attacked_samples = torch.tensor([len(attacked_dataset[key]) for key in ["None"] + attacks], dtype=torch.float)
     normalized_counts = counts_tensor / num_attacked_samples
     probabilities = {key: normalized_counts[i].item() for i, key in enumerate(["None"] + attacks)}
-    probabilities['None'] = good_defence/num_att
+    probabilities['None'] = wrongly_rejected/(len(results)-num_att)
     probs = 'experiments/adversarial_examples/' + experiment_path + f'/prob-adv-success-per-attack_' \
                                                                     f'{num_samples_rejection_level}_{std}_{d1}_{d2}.json'
     with open(probs, 'w') as json_file:
@@ -364,4 +364,5 @@ if __name__ == "__main__":
                              std=args.std,
                              d1=args.d1,
                              d2=args.d2,
-                             nb_workers=args.nb_workers)
+                             nb_workers=args.nb_workers,
+                             verbose=True)

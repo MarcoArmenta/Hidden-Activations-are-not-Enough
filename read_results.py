@@ -2,6 +2,7 @@ import argparse
 import pandas as pd
 import sys
 
+
 def parse_args(parser=None):
     if parser is None:
         parser = argparse.ArgumentParser()
@@ -28,7 +29,15 @@ def check_default_index_exists(df, default_index):
 
 def get_top_10_abs_difference(df, default_index):
     filtered_df = df[df['default_index'] == f'default {default_index}'].copy()
-    filtered_df['abs_difference'] = abs(filtered_df['good_defence'] - filtered_df['wrong_rejection'])
+
+    # Convert columns to float, coercing errors to NaN
+    filtered_df['good_defence'] = pd.to_numeric(filtered_df['good_defence'], errors='coerce')
+    filtered_df['wrong_rejection'] = pd.to_numeric(filtered_df['wrong_rejection'], errors='coerce')
+
+    # Remove rows with NaN values
+    filtered_df = filtered_df.dropna(subset=['good_defence', 'wrong_rejection'])
+
+    filtered_df['abs_difference'] = filtered_df['good_defence'] - filtered_df['wrong_rejection']
     top_10 = filtered_df.nlargest(10, 'abs_difference')
     return top_10[['std', 'd1', 'd2', 'good_defence', 'wrong_rejection']]
 

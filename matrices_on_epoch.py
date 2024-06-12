@@ -44,6 +44,12 @@ def parse_args(parser=None):
         help="The epoch at which to compute matrices.",
     )
     parser.add_argument(
+        "--layers",
+        type=tuple,
+        default=(500, 500, 500, 500, 500),
+        help="The hidden layers for the MLP",
+    )
+    parser.add_argument(
         "--default_hyper_parameters",
         action='store_true',
         help="If not called, computes matrices on a default network from:"
@@ -62,16 +68,9 @@ def parse_args(parser=None):
         help="Number of data samples per class to compute matrices.",
     )
     parser.add_argument(
-        "--chunk_size",
-        type=int,
-        default=625,
-        help="Number of matrices to compute at a time for parallelization",
-    )
-    # TODO: nb_workers = num_samples_per_class/chunk_size
-    parser.add_argument(
         "--nb_workers",
         type=int,
-        default=8,
+        default=1,
         help="Number of threads for parallel computation",
     )
 
@@ -88,11 +87,11 @@ if __name__ == '__main__':
 
     args = parse_args()
     num_samples = args.num_samples_per_class
-    chunk_size = args.chunk_size
+    #chunk_size = args.chunk_size
 
     if args.default_hyper_parameters:
         index = args.default_index
-        print(f"Loading experiment default {index}.")
+        print(f"Loading experiment default {index}")
         experiment = DEFAULT_TRAININGS[f'experiment_{index}']
 
         optimizer_name = experiment['optimizer']
@@ -100,18 +99,22 @@ if __name__ == '__main__':
         lr = experiment['lr']
         batch_size = experiment['batch_size']
         epoch = experiment['epoch']-1
+        layers = experiment['layers']
 
     else:
-        print("Loading custom experiment.")
+        print("Loading custom experiment")
         optimizer_name = args.optimizer
         dataset = args.dataset
         lr = args.lr
         batch_size = args.batch_size
         epoch = args.epoch-1
+        layers = args.layers
 
-    weights_path = f'experiments/weights/{dataset}/{optimizer_name}/{lr}/{batch_size}'
+    chunk_size = num_samples // args.nb_workers
 
-    if not os.path.exists(weights_path + f'epoch_{epoch}.pth'):
+    weights_path = f'experiments/weights/{layers}/{dataset}/{optimizer_name}/{lr}/{batch_size}'
+
+    if not os.path.exists(weights_path + f'/epoch_{epoch}.pth'):
         ValueError(f"Experiment needs to be trained with hyper-parameters: {weights_path}")
 
     save_path = f'experiments/matrices/{dataset}/{optimizer_name}/{lr}/{batch_size}'

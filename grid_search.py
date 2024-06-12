@@ -58,9 +58,22 @@ def check_index_exists(output_file, default_index):
     return f'default {default_index}' in df['default_index'].values
 
 
+# Function to check if a parameter combination exists in the output file
+def check_param_combination_exists(output_file, std, d1, d2, index):
+    if not os.path.exists(output_file):
+        return False
+
+    df = pd.read_csv(output_file)
+    return not df[(df['std'] == std) & (df['d1'] == d1) & (df['d2'] == d2) & (df['default_index'] == f'default {index}')].empty
+
+
 # Function to run the adversarial_attacks.py script with given parameters
 def run_script(params):
     std, d1, d2, index, lock, output_file = params
+
+    if check_param_combination_exists(output_file, std, d1, d2, index):
+        print(f"Skipping existing params: std={std}, d1={d1}, d2={d2}, default_index={index}")
+        return
 
     cmd = f"source ~/NeuralNets/MatrixStatistics/matrix/bin/activate &&" \
           f" python adversarial_attacks.py --std {std} --d1 {d1} --d2 {d2} " \
@@ -99,11 +112,6 @@ def run_script(params):
 
 if __name__ == "__main__":
     args = parse_args()
-
-    # Check if the file exists and if the default index already exists
-    if check_index_exists(args.output_file, args.default_index):
-        print(f"Default index {args.default_index} already exists in {args.output_file}. Exiting without changes.")
-        exit()
 
     # Define the number of processes to use
     num_processes = args.nb_workers  # Adjust this number based on your system's capabilities
