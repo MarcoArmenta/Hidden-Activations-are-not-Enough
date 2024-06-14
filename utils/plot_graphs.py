@@ -2,18 +2,42 @@ import os
 import json
 import torch
 import matplotlib.pyplot as plt
+HIDDEN_SIZE = [(500, 500, 500, 500, 500),
+
+               (1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000),
+
+               (500, 500, 500, 500, 500, 500, 500, 500, 500, 500,
+                500, 500, 500, 500, 500, 500, 500, 500, 500, 500),
+
+               (100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
+                100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
+                100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
+                100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
+                100, 100, 100, 100, 100, 100, 100, 100, 100, 100),
+
+                (1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000,
+                 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000),
+
+                (800, 800, 800, 800, 800, 800, 800, 800, 800, 800,
+                 800, 800, 800, 800, 800, 800, 800, 800, 800, 800,
+                 800, 800, 800, 800, 800, 800, 800, 800, 800, 800,
+                 800, 800, 800, 800, 800, 800, 800, 800, 800, 800,
+                 800, 800, 800, 800, 800, 800, 800, 800, 800, 800),
+
+               (10000, 10000)
+                ]
 
 # Specify the directory where your files are located
 data_set = 'mnist'
 
-optimizers = ['momentum']
-networks = ['small-mlp']
-lrs = [0.01] #, 1e-06, 1e-7, 5e-05, 5e-06, 5e-07]
-bs = [32] #8, 16, 32, 64] # [16, 32, 64]
+optimizers = ['adam', 'sgd', 'momentum']
+layers = HIDDEN_SIZE
+lrs = [0.01, 0.001, 0.0005] #, 1e-06, 1e-7, 5e-05, 5e-06, 5e-07]
+bs = [16, 32, 64] #8, 16, 32, 64] # [16, 32, 64]
 
 for optimiz in optimizers:
-    for network in networks:
-        the_path = f'experiments/weights/{data_set}/{optimiz}'
+    for lay in layers:
+        the_path = f'../experiments/weights/{data_set}/{lay}/{optimiz}'
         for lr in lrs:
             for b in bs:
                 directory_path = f"{the_path}/{lr}/{b}/"
@@ -26,16 +50,17 @@ for optimiz in optimizers:
                 try:
                     all_files = os.listdir(directory_path)
                 except:
+                    print("File does not exists !!!", flush=True)
                     continue
 
                 # Filter files that start with the specified prefix
                 matching_files = sorted([filename for filename in all_files if filename.startswith(file_prefix)])
 
                 n = [0]
-                for _ in range(1, 22):
+                for _ in range(1, 72):
                     n.append(n[-1] + 5)
 
-                matching_files = [f'epoch_{n[j]}.pth' for j in range(20)]
+                matching_files = [f'epoch_{n[j]}.pth' for j in range(70)]
 
                 if not os.path.exists(directory_path + '/results.json'):
                     print(f'Experiment {lr} with {b} did not finish...')
@@ -59,12 +84,12 @@ for optimiz in optimizers:
                     train_losses.pop()
                     plt.plot([test_losses[0]] + train_losses, label='Train Loss')
                     plt.plot(test_losses, label='Test Loss')
-                    plt.xlabel('Epoch')
+                    plt.xlabel(f'{lay}')
                     plt.ylabel('Loss')
                     plt.ylim(0, 5)
 
                     plt.legend()
-                    plt.title(f'{data_set} {network} {optimiz} - Loss, BS={batch_size}, LR={learning_rate}')
+                    plt.title(f'{data_set} {optimiz} BS={batch_size}, LR={learning_rate}')
                     #plt.title(f'Model performance')
 
                     plt.subplot(1, 2, 2)
@@ -84,7 +109,7 @@ for optimiz in optimizers:
                     plt.show()
                     #plt.savefig(f'data/MLP_weights/images/{data_set}/{exp}/BS_{batch_size}_LR_{learning_rate}.png')
                     plt.close()
-
+                    input('One more...')
 
 
 def show_adv_img(img: torch.Tensor) -> None:

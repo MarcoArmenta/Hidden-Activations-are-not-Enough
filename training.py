@@ -111,6 +111,6 @@ def main():
             experiment_path = f'{dataset}/{architecture_index}/{optimizer_name}/{lr}/{batch_size}'
             os.makedirs(f'experiments/weights/{experiment_path}', exist_ok=True)
             torch.save(model.state_dict(), f'experiments/weights/{experiment_path}/epoch_{epoch}.pth')
-
+    # TODO save performance on results.json
 if __name__ == "__main__":
     main()

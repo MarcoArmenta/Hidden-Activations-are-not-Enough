@@ -72,7 +72,7 @@ DEFAULT_EXPERIMENTS = {
         'epoch': 11,
         'reduce_lr_each': 5,
         'save_every_epochs': 5,
-        'residual': False,
+        'residual': True,
     },
     'experiment_6': {
         'architecture_index': 3,

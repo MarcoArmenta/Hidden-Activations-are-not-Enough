@@ -1,87 +1,28 @@
 """
     Creates adversarial examples and tries to detect them using matrix statistics
 """
-
 import os
 import json
 import torch
 import torchvision
 import torchvision.transforms as transforms
 import torchattacks
-import numpy.random as rand
 import argparse
 from multiprocessing import Pool
 
 from matrix_construction.representation import MlpRepresentation
-from utils.utils import get_ellipsoid_data, zero_std, get_model, subset
-from __init__ import DEFAULT_TRAININGS
-
-
-def apply_attack(args):
-    attack_name, attack, data, labels, model = args
-
-    if attack_name == 'None':
-        return attack_name, data
-
-    attacked_data = attack(data, labels)
-    attacked_predictions = torch.argmax(model(attacked_data), dim=1)
-    misclassified = (labels != attacked_predictions).sum().item()
-    total = data.size(0)
-
-    print(f"Attack: {attack_name}")
-    print(f"Misclassified after attack: {misclassified} out of {total}")
-
-    # Filter only the attacked images where labels != attacked_predictions
-    misclassified_indexes = labels != attacked_predictions
-    misclassified_images = attacked_data[misclassified_indexes]
-
-    return attack_name, misclassified_images
+from utils.utils import get_ellipsoid_data, zero_std, get_model, subset, get_dataset
+from constants.constants import DEFAULT_EXPERIMENTS
 
 
 def parse_args(parser=None):
     if parser is None:
         parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--dataset",
-        type=str,
-        default="mnist",
-        help="The datasets to train the model on.",
-    )
-    parser.add_argument(
-        "--optimizer",
-        type=str,
-        default="sgd",
-        help="Optimizer used to train the model.",
-    )
-    parser.add_argument(
-        "--lr",
-        type=float,
-        default=0.01,
-        help="Learning rate used to train the model with.",
-    )
-    parser.add_argument(
-        "--batch_size",
-        type=int,
-        default=8,
-        help="Batch size used to train the model with.",
-    )
-    parser.add_argument(
-        "--epoch",
-        type=int,
-        default=20,
-        help="Epoch of training to do the analysis.",
-    )
-    parser.add_argument(
         "--subset_size",
         type=int,
         default=10000,
         help="Size of data subset to .",
-    )
-    parser.add_argument(
-        "--default_hyper_parameters",
-        action='store_true',
-        help="If not called, computes matrices on a default network from:"
-             f"{DEFAULT_TRAININGS}",
     )
     parser.add_argument(
         "--default_index",
@@ -115,6 +56,27 @@ def parse_args(parser=None):
     )
 
     return parser.parse_args()
+
+
+def apply_attack(args):
+    attack_name, attack, data, labels, model = args
+
+    if attack_name == 'None':
+        return attack_name, data
+
+    attacked_data = attack(data, labels)
+    attacked_predictions = torch.argmax(model(attacked_data), dim=1)
+    misclassified = (labels != attacked_predictions).sum().item()
+    total = data.size(0)
+
+    print(f"Attack: {attack_name}")
+    print(f"Misclassified after attack: {misclassified} out of {total}")
+
+    # Filter only the attacked images where labels != attacked_predictions
+    misclassified_indexes = labels != attacked_predictions
+    misclassified_images = attacked_data[misclassified_indexes]
+
+    return attack_name, misclassified_images
 
 
 def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
@@ -166,7 +128,8 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
                             torchattacks.FAB(model),
                             ]))
 
-    path_adv_examples = 'experiments/adversarial_examples/' + experiment_path + f'/adversarial_examples_{num_samples_rejection_level}.pth'
+    #path_adv_examples = 'experiments/adversarial_examples/' + experiment_path + f'/adversarial_examples_{num_samples_rejection_level}.pth'
+    path_adv_examples = 'experiments/adversarial_examples/' + f'{experiment_path}' + f'/adversarial_examples_{num_samples_rejection_level}.pth'
 
     if os.path.exists(path_adv_examples):
         print("Loading adversarial examples...")
@@ -187,10 +150,15 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
 
         attacked_dataset = dict(results)
 
-        if not os.path.exists('experiments/adversarial_examples/' + experiment_path + ''):
+        if not os.path.exists('experiments/adversarial_examples/' + experiment_path + '/'):
             os.makedirs('experiments/adversarial_examples/' + experiment_path + '/')
 
         torch.save(attacked_dataset, path_adv_examples)
+    # TODO: script that only computes adversarial examples in parallel
+    number_of_attacks_path = 'experiments/adversarial_examples/' + experiment_path + f'/number_examples_per_attack_{num_samples_rejection_level}.json'
+    nb_attacks = {a: len(attacked_dataset[a]) for a in attacks}
+    with open(number_of_attacks_path, 'w') as json_file:
+        json.dump(nb_attacks, json_file, indent=4)
 
     if verbose:
         tt = 0
@@ -213,6 +181,7 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
         for i in range(len(exp_dataset_train[:num_samples_rejection_level])):
             im = exp_dataset_train[i]
             pred = torch.argmax(model.forward(im))
+
             mat = representation.forward(im)
 
             a = get_ellipsoid_data(ellipsoids, pred, "std")
@@ -235,17 +204,24 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
     results = []  # (Rejected, Was attacked)
 
     counts = {key: 0 for key in ["None"] + attacks}
-    # = min(len(attacked_dataset[a]) for a in ["None"]+attacks)
-    #print("Minimal length of adversarial examples: ", min_length)
+
+    path_adv_matrices = 'experiments/adversarial_examples/' + experiment_path + '/matrices'
 
     for a in ["None"]+attacks:
         not_rejected_and_attacked = 0
         rejected_and_attacked = 0
         rejected_and_not_attacked = 0
+        current_path = path_adv_matrices + f"/{a}/"
         for i in range(len(attacked_dataset[a])):
             im = attacked_dataset[a][i]
             pred = torch.argmax(model.forward(im))
-            mat = representation.forward(im)
+
+            if os.path.exists(current_path + f'{i}/matrix.pth'):
+                mat = torch.load(current_path + f'{i}/matrix.pth')
+            else:
+                mat = representation.forward(im)
+                os.makedirs(current_path, exist_ok=True)
+                torch.save(mat, current_path + 'matrix.pth')
 
             b = get_ellipsoid_data(ellipsoids, pred, "std")
             c = zero_std(mat, b, d2).item()
@@ -304,19 +280,75 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
                + experiment_path +
                f'/adv_success_{num_samples_rejection_level}_{std}_{d1}_{d2}.pth')
 
+def main():
+    args = parse_args()
+    if args.default_index is not None:
+        try:
+            experiment = DEFAULT_EXPERIMENTS[f'experiment_{args.default_index}']
+
+            architecture_index = experiment['architecture_index']
+            dataset = experiment['dataset']
+            optimizer_name = experiment['optimizer']
+            lr = experiment['lr']
+            batch_size = experiment['batch_size']
+            epoch = experiment['epoch'] - 1
+
+        except KeyError:
+            print(f"Error: Default index {args.default_index} does not exist.")
+            print(f"When computing matrices of new model, add the experiment to constants.constants.py inside DEFAULT_EXPERIMENTS"
+                  f"and provide the corresponding --default_index when running this script.")
+            return
+
+    experiment_path = f'{dataset}/{architecture_index}/{optimizer_name}/{lr}/{batch_size}'
+
+    print("Experiment: ", experiment_path)
+
+    weights_path = 'experiments/weights/' + experiment_path + f'/{epoch}/epoch_{epoch}.pth'
+    if not os.path.exists(weights_path):
+        ValueError(f"Experiment needs to be trained with hyper-parameters: {weights_path}")
+
+    matrices_path = 'experiments/matrices/' + f'{experiment_path}/{epoch}/matrix_statistics.json'
+    if not os.path.exists(matrices_path):
+        ValueError(f"Matrix statistics have to be computed: {matrices_path}")
+
+    train_set, test_set = get_dataset(dataset, data_loader=False)
+
+    model = get_model(weights_path, architecture_index)
+    representation = MlpRepresentation(model)
+    ellipsoids_file = open(matrices_path)
+    ellipsoids: dict = json.load(ellipsoids_file)
+
+    # Make set of images for experiment
+    exp_dataset_train, _ = subset(train_set, args.subset_size)
+    exp_dataset_test, exp_labels_test = subset(test_set, args.subset_size)
+
+    reject_predicted_attacks(exp_dataset_train,
+                             exp_dataset_test,
+                             exp_labels_test,
+                             representation,
+                             ellipsoids,
+                             experiment_path=experiment_path,
+                             num_samples_rejection_level=args.subset_size // 2,
+                             std=args.std,
+                             d1=args.d1,
+                             d2=args.d2,
+                             nb_workers=args.nb_workers,
+                             verbose=True)
+
 
 if __name__ == "__main__":
     args = parse_args()
     if args.default_hyper_parameters:
         print("Loading default experiment.")
         index = args.default_index
-        experiment = DEFAULT_TRAININGS[f'experiment_{index}']
+        experiment = DEFAULT_EXPERIMENTS[f'experiment_{index}']
 
         optimizer_name = experiment['optimizer']
         dataset = experiment['dataset']
         lr = experiment['lr']
         batch_size = experiment['batch_size']
         epoch = experiment['epoch']-1
+        hidden_layers_idx = experiment['hidden_layers_idx']
 
     else:
         print("Loading custom experiment.")
@@ -326,43 +358,3 @@ if __name__ == "__main__":
         batch_size = args.batch_size
         epoch = args.epoch-1
 
-    experiment_path = f'{dataset}/{optimizer_name}/{lr}/{batch_size}'
-    print("Experiment: ", experiment_path)
-
-    weights_path = 'experiments/weights/' + experiment_path + f'/epoch_{epoch}.pth'
-    if not os.path.exists(weights_path + f'epoch_{epoch}.pth'):
-        ValueError(f"Experiment needs to be trained with hyper-parameters: {weights_path}")
-
-    matrices_path = 'experiments/matrices/' + experiment_path + f'/{epoch}/matrix_statistics.json'
-    if not os.path.exists(matrices_path + f'epoch_{epoch}.pth'):
-        ValueError(f"Matrix statistics have to be computed with hyper-parameters: {matrices_path}")
-
-    transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
-    if dataset == "mnist":
-        train_set = torchvision.datasets.MNIST(root='./data', train=True, transform=transform, download=True)
-        test_set = torchvision.datasets.MNIST(root='./data', train=False, transform=transform, download=True)
-    elif dataset == "fashion":
-        train_set = torchvision.datasets.FashionMNIST(root='./data', train=True, transform=transform, download=True)
-        test_set = torchvision.datasets.FashionMNIST(root='./data', train=False, transform=transform, download=True)
-
-    model = get_model(weights_path)
-    representation = MlpRepresentation(model)
-    ellipsoids_file = open(matrices_path)
-    ellipsoids: dict = json.load(ellipsoids_file)
-
-    # Make set of images for experiment
-    exp_dataset_train, exp_labels_train = subset(train_set, args.subset_size)
-    exp_dataset_test, exp_labels_test = subset(test_set, args.subset_size)
-
-    reject_predicted_attacks(exp_dataset_train,
-                             exp_dataset_test,
-                             exp_labels_test,
-                             representation,
-                             ellipsoids,
-                             experiment_path=experiment_path,
-                             num_samples_rejection_level=args.subset_size//2,
-                             std=args.std,
-                             d1=args.d1,
-                             d2=args.d2,
-                             nb_workers=args.nb_workers,
-                             verbose=True)
