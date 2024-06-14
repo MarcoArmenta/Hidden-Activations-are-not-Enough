@@ -5,35 +5,47 @@ import torchvision
 from torchvision import transforms
 
 from model_zoo.mlp import MLP
+from constants.constants import ARCHITECTURES
 
 
-def get_architecture(input_shape=(1, 28, 28), num_classes=10):
+def get_architecture(input_shape=(1, 28, 28), num_classes=10, architecture_index=0, residual=False):
     model = MLP(input_shape=input_shape,
                 num_classes=num_classes,
-                hidden_sizes=(500, 500, 500, 500, 500),
-                bias=True
+                hidden_sizes=ARCHITECTURES[architecture_index],
+                residual=residual,
+                bias=True,
                 )
     return model
 
 
-def get_dataset(data_set):
+def get_dataset(data_set, batch_size=32, data_loader=True):
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
     if data_set == 'mnist':
         train_set = torchvision.datasets.MNIST(root='./data', train=True, transform=transform, download=True)
         test_set = torchvision.datasets.MNIST(root='./data', train=False, transform=transform, download=True)
-        return train_set, test_set
+        if data_loader:
+            train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True)
+            test_loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size, shuffle=False)
+            return train_loader, test_loader
+        else:
+            return train_set, test_set
     elif data_set == 'fashion':
         train_set = torchvision.datasets.FashionMNIST(root='./data', train=True, transform=transform, download=True)
         test_set = torchvision.datasets.FashionMNIST(root='./data', train=False, transform=transform, download=True)
-        return train_set, test_set
+        if data_loader:
+            train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True)
+            test_loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size, shuffle=False)
+            return train_loader, test_loader
+        else:
+            return train_set, test_set
     else:
         print(f"Dataset {data_set} not supported...")
         exit(1)
 
 
-def get_model(path: str):
+def get_model(path: str, hidden_layers_idx):
     weight_path = torch.load(path, map_location=torch.device('cpu'))
-    model = get_architecture()
+    model = get_architecture(hidden_layers_idx=hidden_layers_idx)
     model.load_state_dict(weight_path)
     return model
 
@@ -69,8 +81,8 @@ def compute_statistics(matrix_paths):
     return statistics
 
 
-def compute_train_statistics(original_data, optimizer, lr, bs, epoch):
-    original_matrices_path = f'experiments/matrices/{original_data}/{optimizer}/{lr}/{bs}/{epoch}/'
+def compute_train_statistics(original_data, optimizer, lr, bs, epoch, architecture_index=0):
+    original_matrices_path = f'experiments/matrices/{original_data}/{architecture_index}/{optimizer}/{lr}/{bs}/{epoch}/'
     original_matrices_paths = find_matrices(original_matrices_path)
 
     statistics = compute_statistics(original_matrices_paths)
