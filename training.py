@@ -34,8 +34,6 @@ def get_device():
 def train_one_epoch(model, train_loader, criterion, optimizer, device):
     model.train()
     running_loss = 0.0
-    correct = 0
-    total = 0
     for inputs, labels in train_loader:
         inputs, labels = inputs.to(device), labels.to(device)
         optimizer.zero_grad()
@@ -44,10 +42,6 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device):
         loss.backward()
         optimizer.step()
         running_loss += loss.item() * inputs.size(0)
-        _, predicted = torch.max(outputs, 1)
-        total += labels.size(0)
-        correct += (predicted == labels).sum().item()
-    return running_loss / len(train_loader), correct / total
 
 def evaluate_model(model, data_loader, criterion, device):
     model.eval()
@@ -112,8 +106,9 @@ def main():
 
     print("Training...", flush=True)
     for epoch in range(epochs):
-        train_loss, train_accuracy = train_one_epoch(model, train_loader, criterion, optimizer, device)
+        train_one_epoch(model, train_loader, criterion, optimizer, device)
 
+        train_loss, train_accuracy = evaluate_model(model, train_loader, criterion, device)
         test_loss, test_accuracy = evaluate_model(model, test_loader, criterion, device)
 
         print(f"Epoch {epoch}/{epochs}, Train Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}, "
