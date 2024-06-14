@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from constants.constants import DEFAULT_EXPERIMENTS
-from utils.utils import get_architecture, get_dataset
+from utils.utils import get_architecture, get_dataset, get_device
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -19,17 +19,6 @@ def parse_args():
     parser.add_argument("--reduce_lr_each", type=int, help="Reduce learning rate every this number of epochs.")
     parser.add_argument("--save_every_epochs", type=int, help="Save weights every this number of epochs.")
     return parser.parse_args()
-
-def get_device():
-    if torch.cuda.is_available():
-        print("DEVICE: cuda")
-        return torch.device("cuda")
-    elif torch.backends.mps.is_available():
-        print("DEVICE: mps")
-        return torch.device("mps")
-    else:
-        print("DEVICE: cpu")
-        return torch.device("cpu")
 
 def train_one_epoch(model, train_loader, criterion, optimizer, device):
     model.train()

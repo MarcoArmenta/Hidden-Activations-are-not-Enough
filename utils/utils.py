@@ -8,6 +8,18 @@ from model_zoo.mlp import MLP
 from constants.constants import ARCHITECTURES
 
 
+def get_device():
+    if torch.cuda.is_available():
+        print("DEVICE: cuda")
+        return torch.device("cuda")
+    elif torch.backends.mps.is_available():
+        print("DEVICE: mps")
+        return torch.device("mps")
+    else:
+        print("DEVICE: cpu")
+        return torch.device("cpu")
+
+
 def get_architecture(input_shape=(1, 28, 28), num_classes=10, architecture_index=0, residual=False):
     model = MLP(input_shape=input_shape,
                 num_classes=num_classes,

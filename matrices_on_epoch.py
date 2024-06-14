@@ -1,5 +1,5 @@
 """
-    This script computes matrices for a subset of a dataset for a neural network trained with specific hyperparameters.
+    This script computes matrices for a subset of a dataset for a neural network trained with specific hyper parameters.
 """
 import os
 import argparse
@@ -7,73 +7,15 @@ from multiprocessing import Pool
 
 from matrix_construction.matrix_construction import MatrixConstruction
 from utils.utils import compute_train_statistics
-from __init__ import DEFAULT_TRAININGS
+from constants.constants import DEFAULT_EXPERIMENTS
+from utils.utils import get_device
 
 
-def parse_args(parser=None):
-    if parser is None:
-        parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--dataset",
-        type=str,
-        default="mnist",
-        help="The datasets to train the model on.",
-    )
-    parser.add_argument(
-        "--optimizer",
-        type=str,
-        default="sgd",
-        help="Optimizer to train the model with.",
-    )
-    parser.add_argument(
-        "--lr",
-        type=float,
-        default=0.01,
-        help="The learning rate.",
-    )
-    parser.add_argument(
-        "--batch_size",
-        type=str,
-        default=8,
-        help="The batch size.",
-    )
-    parser.add_argument(
-        "--epoch",
-        type=str,
-        default=0,
-        help="The epoch at which to compute matrices.",
-    )
-    parser.add_argument(
-        "--layers",
-        type=tuple,
-        default=(500, 500, 500, 500, 500),
-        help="The hidden layers for the MLP",
-    )
-    parser.add_argument(
-        "--default_hyper_parameters",
-        action='store_true',
-        help="If not called, computes matrices on a default network from:"
-             f"{DEFAULT_TRAININGS}",
-    )
-    parser.add_argument(
-        "--default_index",
-        type=int,
-        default=0,
-        help="Index of default trained networks.",
-    )
-    parser.add_argument(
-        "--num_samples_per_class",
-        type=int,
-        default=5000,
-        help="Number of data samples per class to compute matrices.",
-    )
-    parser.add_argument(
-        "--nb_workers",
-        type=int,
-        default=1,
-        help="Number of threads for parallel computation",
-    )
-
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--default_index", type=int, default=0, help="The index for default experiment")
+    parser.add_argument("--num_samples_per_class", type=int, default=1000, help="Number of data samples per class to compute matrices.")
+    parser.add_argument("--nb_workers", type=int, default=2, help="Number of threads for parallel computation")
     return parser.parse_args()
 
 
@@ -82,42 +24,38 @@ def compute_matrices(exp, chunk_id):
                         train=True)
 
 
-if __name__ == '__main__':
-    device = "cpu"
-
+def main():
     args = parse_args()
-    num_samples = args.num_samples_per_class
-    #chunk_size = args.chunk_size
+    if args.default_index is not None:
+        try:
+            experiment = DEFAULT_EXPERIMENTS[f'experiment_{args.default_index}']
 
-    if args.default_hyper_parameters:
-        index = args.default_index
-        print(f"Loading experiment default {index}")
-        experiment = DEFAULT_TRAININGS[f'experiment_{index}']
+            architecture_index = experiment['architecture_index']
+            dataset = experiment['dataset']
+            optimizer_name = experiment['optimizer']
+            lr = experiment['lr']
+            batch_size = experiment['batch_size']
+            epoch = experiment['epoch'] - 1
+            residual = experiment['residual']
+            num_samples = args.num_samples_per_class
 
-        optimizer_name = experiment['optimizer']
-        dataset = experiment['dataset']
-        lr = experiment['lr']
-        batch_size = experiment['batch_size']
-        epoch = experiment['epoch']-1
-        layers = experiment['layers']
+        except KeyError:
+            print(f"Error: Default index {args.default_index} does not exist.")
+            print(f"When computing matrices of new model, add the experiment to constants.constants.py inside DEFAULT_EXPERIMENTS"
+                  f"and provide the corresponding --default_index when running this script.")
+            return
 
-    else:
-        print("Loading custom experiment")
-        optimizer_name = args.optimizer
-        dataset = args.dataset
-        lr = args.lr
-        batch_size = args.batch_size
-        epoch = args.epoch-1
-        layers = args.layers
-
+    #device = get_device()
+    device = 'cpu'
     chunk_size = num_samples // args.nb_workers
+    experiment_path = f'{dataset}/{architecture_index}/{optimizer_name}/{lr}/{batch_size}'
 
-    weights_path = f'experiments/weights/{layers}/{dataset}/{optimizer_name}/{lr}/{batch_size}'
+    weights_path = f'experiments/weights/{experiment_path}'
 
     if not os.path.exists(weights_path + f'/epoch_{epoch}.pth'):
-        ValueError(f"Experiment needs to be trained with hyper-parameters: {weights_path}")
+        ValueError(f"Experiment needs to be trained with hyper-parameters: {experiment_path}")
 
-    save_path = f'experiments/matrices/{dataset}/{optimizer_name}/{lr}/{batch_size}'
+    save_path = f'experiments/matrices/{experiment_path}'
 
     dict_exp = {"epochs": epoch,
                 "weights_path": weights_path,
@@ -126,10 +64,12 @@ if __name__ == '__main__':
                 "data_name": dataset,
                 'num_samples': num_samples,
                 'chunk_size': chunk_size,
+                'architecture_index': architecture_index,
+                'residual': residual
                 }
 
     exp = MatrixConstruction(dict_exp)
-    chunks = list(range(num_samples//chunk_size))
+    chunks = list(range(num_samples // chunk_size))
     arguments = list(zip([exp for _ in range(len(chunks))], chunks))
 
     print(f"Computing matrices...", flush=True)
@@ -137,4 +77,8 @@ if __name__ == '__main__':
         results = pool.starmap(compute_matrices, arguments)
 
     print('Computing matrix statistics', flush=True)
-    compute_train_statistics(dataset, optimizer_name, lr, batch_size, epoch)
+    compute_train_statistics(dataset, optimizer_name, lr, batch_size, epoch, architecture_index=architecture_index)
+
+
+if __name__ == '__main__':
+    main()

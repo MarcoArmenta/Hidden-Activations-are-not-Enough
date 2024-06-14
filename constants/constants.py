@@ -37,7 +37,7 @@ DEFAULT_EXPERIMENTS = {
         'lr': 1e-06,
         'batch_size': 16,
         'epoch': 51,
-        'reduce_lr_each': 20,
+        'reduce_lr_each': 10,
         'save_every_epochs': 10,
         'residual': False,
     },
@@ -58,7 +58,7 @@ DEFAULT_EXPERIMENTS = {
         'dataset': 'mnist',
         'lr': 0.01,
         'batch_size': 32,
-        'epoch': 71,
+        'epoch': 21,
         'reduce_lr_each': 20,
         'save_every_epochs': 5,
         'residual': True,
@@ -74,15 +74,15 @@ DEFAULT_EXPERIMENTS = {
         'save_every_epochs': 5,
         'residual': False,
     },
-    'experiment_6': { # TODO this is not trained correctly yet
+    'experiment_6': {
         'architecture_index': 3,
         'optimizer': 'momentum',
         'dataset': 'mnist',
         'lr': 0.01,
         'batch_size': 32,
-        'epoch': 21,
+        'epoch': 1,
         'reduce_lr_each': 5,
-        'save_every_epochs': 5,
+        'save_every_epochs': 1,
         'residual': False,
     }
 }

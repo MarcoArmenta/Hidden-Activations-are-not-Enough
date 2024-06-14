@@ -60,9 +60,11 @@ class MatrixConstruction:
         self.device: str = dict_exp["device"]
         self.chunk_size = dict_exp['chunk_size']
         self.save_path = dict_exp['save_path']
+        self.architecture_index = dict_exp['architecture_index']
+        self.residual = dict_exp['residual']
 
         self.num_classes = 10
-        self.data = get_dataset(self.dataname)
+        self.data = get_dataset(self.dataname, data_loader=False)
 
     def compute_matrices_epoch_on_dataset(self, model: MLP, chunk_id: int, train=True) -> None:
         if train:
@@ -101,7 +103,7 @@ class MatrixConstruction:
         model_path = os.path.join(new_path, model_file)
         state_dict = torch.load(model_path, map_location=torch.device('cpu'))
 
-        model = get_architecture()
+        model = get_architecture(architecture_index=self.architecture_index, residual=self.residual)
         model.load_state_dict(state_dict)
 
         self.compute_matrices_epoch_on_dataset(model, chunk_id=chunk_id, train=train)
