@@ -62,7 +62,7 @@ def check_param_combination_exists(output_file, std, d1, d2, index):
     return not df[(df['std'] == std) & (df['d1'] == d1) & (df['d2'] == d2) & (df['default_index'] == f'default {index}')].empty
 
 
-# Function to run the adversarial_attacks.py script with given parameters
+# Function to run the generate_adversarial_examples.py script with given parameters
 def run_adv_examples_script(params):
     std, d1, d2, index, lock, output_file = params
 

@@ -11,7 +11,7 @@ class MLP(nn.Module):
         self,
         input_shape,
         num_classes,
-        hidden_sizes=(10, 10),
+        hidden_sizes=(500 for _ in range(5)),
         activation="relu",
         bias=False,
         dropout=False,

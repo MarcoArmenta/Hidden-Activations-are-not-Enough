@@ -1,11 +1,17 @@
-ARCHITECTURES = [(500 for _ in range(5)),
+ARCHITECTURES = [(500, 500, 500, 500, 500),
 
-                 (1000 for _ in range(8)),
+                 (1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000),
 
-                 (1000 for _ in range(20)),
+                 (1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000,
+                  1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000),
 
                  (10000, 10000),
                ]
+
+ATTACKS = ["GN", "FGSM", "RFGSM", "PGD", "EOTPGD", "FFGSM", "TPGD", "MIFGSM", "UPGD", "DIFGSM", "NIFGSM",
+           "PGDRS", "SINIFGSM", "VMIFGSM", "VNIFGSM", "CW", "PGDL2", "PGDRSL2", "DeepFool", "SparseFool",
+           "OnePixel", "Pixle", "FAB"]
+
 
 DEFAULT_EXPERIMENTS = {
     'experiment_0': {
@@ -14,7 +20,7 @@ DEFAULT_EXPERIMENTS = {
         'optimizer': 'sgd',
         'lr': 0.01,
         'batch_size': 8,
-        'epoch': 21,
+        'epoch': 1,
         'reduce_lr_each': 5,
         'save_every_epochs': 2,
         'residual': False,
@@ -35,9 +41,9 @@ DEFAULT_EXPERIMENTS = {
         'optimizer': 'adam',
         'dataset': 'fashion',
         'lr': 1e-06,
-        'batch_size': 16,
-        'epoch': 51,
-        'reduce_lr_each': 10,
+        'batch_size': 32,
+        'epoch': 81,
+        'reduce_lr_each': 20,
         'save_every_epochs': 10,
         'residual': False,
     },

@@ -55,9 +55,9 @@ def get_dataset(data_set, batch_size=32, data_loader=True):
         exit(1)
 
 
-def get_model(path: str, hidden_layers_idx):
-    weight_path = torch.load(path, map_location=torch.device('cpu'))
-    model = get_architecture(hidden_layers_idx=hidden_layers_idx)
+def get_model(path, architecture_index):
+    weight_path = torch.load(str(path), map_location=torch.device('cpu'))
+    model = get_architecture(architecture_index=architecture_index)
     model.load_state_dict(weight_path)
     return model
 
