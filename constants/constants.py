@@ -6,7 +6,14 @@ ARCHITECTURES = [(500, 500, 500, 500, 500),
                   1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000),
 
                  (10000, 10000),
+
+                 (10000, 10000, 10000, 10000, 10000),
+
+                 (10000, 9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000),
                ]
+
+# TODO: Train BIG mlp for a lot of time
+# TODO: pretrained mlps on the internet
 
 ATTACKS = ["GN", "FGSM", "RFGSM", "PGD", "EOTPGD", "FFGSM", "TPGD", "MIFGSM", "UPGD", "DIFGSM", "NIFGSM",
            "PGDRS", "SINIFGSM", "VMIFGSM", "VNIFGSM", "CW", "PGDL2", "PGDRSL2", "DeepFool", "SparseFool",
@@ -89,6 +96,39 @@ DEFAULT_EXPERIMENTS = {
         'epoch': 1,
         'reduce_lr_each': 5,
         'save_every_epochs': 1,
+        'residual': False,
+    },
+    'experiment_7': {
+        'architecture_index': 3,
+        'optimizer': 'momentum',
+        'dataset': 'fashion',
+        'lr': 0.01,
+        'batch_size': 32,
+        'epoch': 11,
+        'reduce_lr_each': 5,
+        'save_every_epochs': 1,
+        'residual': False,
+    },
+    'experiment_8': { #TODO: check performance 99 train vs 60 test
+        'architecture_index': 3,
+        'optimizer': 'momentum',
+        'dataset': 'cifar10',
+        'lr': 0.01,
+        'batch_size': 64,
+        'epoch': 101,
+        'reduce_lr_each': 20,
+        'save_every_epochs': 1,
+        'residual': False,
+    },
+    'experiment_9': { #TODO: check performance
+        'architecture_index': 5,
+        'optimizer': 'sgd',
+        'dataset': 'cifar10',
+        'lr': 0.001,
+        'batch_size': 8,
+        'epoch': 201,
+        'reduce_lr_each': 40,
+        'save_every_epochs': 50,
         'residual': False,
     }
 }

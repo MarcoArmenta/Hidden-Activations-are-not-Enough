@@ -5,10 +5,11 @@ import torch.nn as nn
 import torch.optim as optim
 from constants.constants import DEFAULT_EXPERIMENTS
 from utils.utils import get_architecture, get_dataset, get_device
+from torch.optim.lr_scheduler import StepLR
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--default_index", type=int, default=0, help="The index for default experiment")
+    parser.add_argument("--default_index", type=int, default=9, help="The index for default experiment")
     parser.add_argument("--architecture_index", type=int, help="The index of the architecture to train.")
     parser.add_argument("--residual", type=int, help="Residual connections in the architecture every 4 layers.")
     parser.add_argument("--dataset", type=str, help="The dataset to train the model on.")
@@ -79,19 +80,23 @@ def main():
 
     device = get_device()
     train_loader, test_loader = get_dataset(dataset, batch_size, data_loader=True)
-    model = get_architecture(architecture_index=architecture_index, residual=residual).to(device)
+    input_shape = (3, 32, 32) if dataset == 'cifar10' else (1, 28, 28)
+    # TODO: only the last experiment has dropout... and need to check its performance
+    model = get_architecture(architecture_index=architecture_index, residual=residual, input_shape=input_shape, dropout=True).to(device)
     criterion = nn.CrossEntropyLoss()
+    # TODO: weight decay should depend on experiment
     if optimizer_name == "sgd":
-        optimizer = optim.SGD(model.parameters(), lr=lr)
+        optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=1e-5)
     elif optimizer_name == "momentum":
-        optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9)
+        optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=1e-5)
     elif optimizer_name == "adam":
-        optimizer = optim.Adam(model.parameters(), lr=lr)
+        optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
     else:
         raise ValueError("Unsupported optimizer")
 
-    print("Moving model to device", flush=True)
     model = model.to(device)
+
+    scheduler = StepLR(optimizer, step_size=reduce_lr_each, gamma=0.1)
 
     print("Training...", flush=True)
     for epoch in range(epochs):
@@ -103,9 +108,7 @@ def main():
         print(f"Epoch {epoch}/{epochs}, Train Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}, "
               f"Train Accuracy: {train_accuracy:.4f}, Test Accuracy: {test_accuracy:.4f}")
 
-        if epoch % reduce_lr_each == 0:
-            for param_group in optimizer.param_groups:
-                param_group['lr'] *= 0.1
+        scheduler.step()
 
         if epoch % save_every_epochs == 0:
             experiment_path = f'{dataset}/{architecture_index}/{optimizer_name}/{lr}/{batch_size}'

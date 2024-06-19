@@ -20,12 +20,13 @@ def get_device():
         return torch.device("cpu")
 
 
-def get_architecture(input_shape=(1, 28, 28), num_classes=10, architecture_index=0, residual=False):
+def get_architecture(input_shape=(1, 28, 28), num_classes=10, architecture_index=0, residual=False, dropout=False):
     model = MLP(input_shape=input_shape,
                 num_classes=num_classes,
                 hidden_sizes=ARCHITECTURES[architecture_index],
                 residual=residual,
                 bias=True,
+                dropout=dropout,
                 )
     return model
 
@@ -44,6 +45,15 @@ def get_dataset(data_set, batch_size=32, data_loader=True):
     elif data_set == 'fashion':
         train_set = torchvision.datasets.FashionMNIST(root='./data', train=True, transform=transform, download=True)
         test_set = torchvision.datasets.FashionMNIST(root='./data', train=False, transform=transform, download=True)
+        if data_loader:
+            train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True)
+            test_loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size, shuffle=False)
+            return train_loader, test_loader
+        else:
+            return train_set, test_set
+    elif data_set == 'cifar10':
+        train_set = torchvision.datasets.CIFAR10(root='./data', train=True, transform=transform, download=True)
+        test_set = torchvision.datasets.CIFAR10(root='./data', train=False, transform=transform, download=True)
         if data_loader:
             train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True)
             test_loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size, shuffle=False)
