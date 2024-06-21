@@ -34,9 +34,10 @@ def parse_args(parser=None):
 
 
 def apply_attack(attack_name, data, labels, weights_path, architecture_index, path_adv_examples, residual, input_shape):
-    if os.path.exists(path_adv_examples / f'{attack_name}/adversarial_examples.pth'):
+    attack_save_path = path_adv_examples / f'{attack_name}/adversarial_examples.pth'
+    if attack_save_path.exists():
         print(f"Loading attack {attack_name}")
-        misclassified_images = torch.load(path_adv_examples / f'{attack_name}/adversarial_examples.pth')
+        misclassified_images = torch.load(attack_save_path)
         return attack_name, misclassified_images
 
     print(f"Attacking with {attack_name}", flush=True)
@@ -73,8 +74,8 @@ def apply_attack(attack_name, data, labels, weights_path, architecture_index, pa
     attacked_data = attacks_classes[attack_name](data, labels)
 
     if attack_name == "test":
-        (path_adv_examples / f'{attack_name}/').mkdir(parents=True, exist_ok=True)
-        torch.save(attacked_data, path_adv_examples / f'{attack_name}/adversarial_examples.pth')
+        attack_save_path.parent.mkdir(parents=True, exist_ok=True)
+        torch.save(attacked_data, attack_save_path)
         return attack_name, attacked_data
 
     attacked_predictions = torch.argmax(model(attacked_data), dim=1)
@@ -88,9 +89,8 @@ def apply_attack(attack_name, data, labels, weights_path, architecture_index, pa
     misclassified_indexes = labels != attacked_predictions
     misclassified_images = attacked_data[misclassified_indexes]
 
-    (path_adv_examples / f'{attack_name}/').mkdir(parents=True, exist_ok=True)
-    adversarial_examples = {attack_name: misclassified_images}
-    torch.save(adversarial_examples, path_adv_examples / f'{attack_name}/adversarial_examples.pth')
+    attack_save_path.parent.mkdir(parents=True, exist_ok=True)
+    torch.save(misclassified_images, attack_save_path)
 
     return attack_name, misclassified_images
 
@@ -108,14 +108,14 @@ def generate_matrices_for_attacks(attack,
     model = get_model(weights_path, architecture_index, residual, input_shape)
     representation = MlpRepresentation(model)
     print(f"Generating matrices for attack {attack}.", flush=True)
-    print(type(attacked_dataset))
-    print(type(attack))
-    print(type(attacked_dataset[attack]))
-    for i in range(len(attacked_dataset[attack])):
-        im = attacked_dataset[attack][i]
-        if not os.path.exists(path_adv_matrices / f'{attack}' / f'{i}/matrix.pth'):
+
+    for i in range(len(attacked_dataset)):
+        im = attacked_dataset[i]
+        matrix_save_path = path_adv_matrices / f'{attack}' / f'{i}/matrix.pth'
+        matrix_save_path.parent.mkdir(parents=True, exist_ok=True)
+        if not matrix_save_path.exists():
             mat = representation.forward(im)
-            torch.save(mat, path_adv_matrices / f'{attack}' / f'{i}/matrix.pth')
+            torch.save(mat, matrix_save_path)
     print(f"Matrices for attack {attack} finished.", flush=True)
 
 
