@@ -7,9 +7,10 @@ from constants.constants import DEFAULT_EXPERIMENTS
 from utils.utils import get_architecture, get_dataset, get_device
 from torch.optim.lr_scheduler import StepLR
 
+
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--default_index", type=int, default=9, help="The index for default experiment")
+    parser.add_argument("--default_index", type=int, default=0, help="The index for default experiment")
     parser.add_argument("--architecture_index", type=int, help="The index of the architecture to train.")
     parser.add_argument("--residual", type=int, help="Residual connections in the architecture every 4 layers.")
     parser.add_argument("--dataset", type=str, help="The dataset to train the model on.")
@@ -20,6 +21,7 @@ def parse_args():
     parser.add_argument("--reduce_lr_each", type=int, help="Reduce learning rate every this number of epochs.")
     parser.add_argument("--save_every_epochs", type=int, help="Save weights every this number of epochs.")
     return parser.parse_args()
+
 
 def train_one_epoch(model, train_loader, criterion, optimizer, device):
     model.train()
@@ -32,6 +34,7 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device):
         loss.backward()
         optimizer.step()
         running_loss += loss.item() * inputs.size(0)
+
 
 def evaluate_model(model, data_loader, criterion, device):
     model.eval()
@@ -49,6 +52,7 @@ def evaluate_model(model, data_loader, criterion, device):
             correct += (predicted == labels).sum().item()
     return running_loss / len(data_loader), correct / total
 
+
 def main():
     args = parse_args()
     if args.default_index is not None:
@@ -63,38 +67,31 @@ def main():
             reduce_lr_each = experiment['reduce_lr_each']
             save_every_epochs = experiment['save_every_epochs']
             residual = experiment['residual']
+            dropout = experiment['dropout']
+            weight_decay = experiment['weight_decay']
 
         except KeyError:
             print(f"Error: Default index {args.default_index} does not exist.")
             return
     else:
-        architecture_index = args.architecture_index
-        residual = args.residual
-        dataset = args.dataset
-        optimizer_name = args.optimizer
-        lr = args.lr
-        batch_size = args.batch_size
-        epochs = args.epochs
-        reduce_lr_each = args.reduce_lr_each
-        save_every_epochs = args.save_every_epochs
+        raise ValueError("Default index not specified in constants/constants.py")
 
     device = get_device()
     train_loader, test_loader = get_dataset(dataset, batch_size, data_loader=True)
     input_shape = (3, 32, 32) if dataset == 'cifar10' else (1, 28, 28)
-    # TODO: only the last experiment has dropout... and need to check its performance
-    model = get_architecture(architecture_index=architecture_index, residual=residual, input_shape=input_shape, dropout=True).to(device)
+    model = get_architecture(architecture_index=architecture_index,
+                             residual=residual,
+                             input_shape=input_shape,
+                             dropout=dropout).to(device)
     criterion = nn.CrossEntropyLoss()
-    # TODO: weight decay should depend on experiment
     if optimizer_name == "sgd":
-        optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=1e-5)
+        optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=weight_decay)
     elif optimizer_name == "momentum":
-        optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=1e-5)
+        optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=weight_decay)
     elif optimizer_name == "adam":
-        optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
+        optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     else:
         raise ValueError("Unsupported optimizer")
-
-    model = model.to(device)
 
     scheduler = StepLR(optimizer, step_size=reduce_lr_each, gamma=0.1)
 
@@ -111,9 +108,9 @@ def main():
         scheduler.step()
 
         if epoch % save_every_epochs == 0:
-            experiment_path = f'{dataset}/{architecture_index}/{optimizer_name}/{lr}/{batch_size}'
-            os.makedirs(f'experiments/weights/{experiment_path}', exist_ok=True)
-            torch.save(model.state_dict(), f'experiments/weights/{experiment_path}/epoch_{epoch}.pth')
-    # TODO save performance on results.json
+            os.makedirs(f'experiments/{args.default_index}/weights/', exist_ok=True)
+            torch.save(model.state_dict(), f'experiments/{args.default_index}/weights/epoch_{epoch}.pth')
+
+
 if __name__ == "__main__":
     main()

@@ -65,9 +65,11 @@ def get_dataset(data_set, batch_size=32, data_loader=True):
         exit(1)
 
 
-def get_model(path, architecture_index):
+def get_model(path, architecture_index, residual, input_shape):
     weight_path = torch.load(str(path), map_location=torch.device('cpu'))
-    model = get_architecture(architecture_index=architecture_index)
+    model = get_architecture(architecture_index=architecture_index,
+                             residual=residual,
+                             input_shape=input_shape)
     model.load_state_dict(weight_path)
     return model
 
@@ -103,8 +105,8 @@ def compute_statistics(matrix_paths):
     return statistics
 
 
-def compute_train_statistics(original_data, optimizer, lr, bs, epoch, architecture_index=0):
-    original_matrices_path = f'experiments/matrices/{original_data}/{architecture_index}/{optimizer}/{lr}/{bs}/{epoch}/'
+def compute_train_statistics(default_index=0):
+    original_matrices_path = f'experiments/{default_index}/matrices/'
     original_matrices_paths = find_matrices(original_matrices_path)
 
     statistics = compute_statistics(original_matrices_paths)

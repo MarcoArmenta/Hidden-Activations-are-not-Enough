@@ -12,9 +12,7 @@ from utils.utils import get_architecture, get_dataset
 
 def compute_chunk_of_matrices(data: torch.Tensor,
                               representation: MLP,
-                              epoch: int,
                               clas: int,
-                              train: bool = True,
                               chunk_size: int = 10,
                               save_path=None,
                               chunk_id: int = 0) -> None:
@@ -23,15 +21,12 @@ def compute_chunk_of_matrices(data: torch.Tensor,
     the induced matrices in the corresponding chunk of samples in data
     """
     if save_path is not None:
-        directory = save_path + '/' + str(epoch) + '/' + str(clas) + '/'
+        directory = save_path + '/' + str(clas) + '/'
 
     else:
-        directory = str(epoch) + '/' + str(clas) + '/'
+        directory = '/' + str(clas) + '/'
 
-    directory += 'train/' if train else 'test/'
-
-    if not os.path.exists(directory):
-        os.makedirs(directory, exist_ok=True)
+    os.makedirs(directory, exist_ok=True)
 
     data = data[chunk_id*chunk_size:(chunk_id+1)*chunk_size]
 
@@ -57,30 +52,24 @@ class MatrixConstruction:
         self.num_samples: int = dict_exp["num_samples"]
         self.dataname: str = dict_exp["data_name"].lower()
         self.weights_path = dict_exp["weights_path"]
-        self.device: str = dict_exp["device"]
         self.chunk_size = dict_exp['chunk_size']
         self.save_path = dict_exp['save_path']
         self.architecture_index = dict_exp['architecture_index']
         self.residual = dict_exp['residual']
 
         self.num_classes = 10
-        self.data = get_dataset(self.dataname, data_loader=False)
+        self.data = get_dataset(self.dataname, data_loader=False)[0]
 
-    def compute_matrices_epoch_on_dataset(self, model: MLP, chunk_id: int, train=True) -> None:
-        if train:
-            dataset = self.data[0]
-        else:
-            dataset = self.data[1]
-
+    def compute_matrices_on_dataset(self, model: MLP, chunk_id: int) -> None:
         if isinstance(model, MLP):
-            representation = MlpRepresentation(model=model, device=self.device)
+            representation = MlpRepresentation(model=model)
         else:
-            ValueError(f"Architecture not supported: {model}."
-                       f"Expects MLP")
+            raise ValueError(f"Architecture not supported: {model}."
+                             f"Expects MLP")
 
         for i in range(self.num_classes):
-            train_indices = [idx for idx, target in enumerate(dataset.targets) if target in [i]]
-            sub_train_dataloader = DataLoader(Subset(dataset, train_indices),
+            train_indices = [idx for idx, target in enumerate(self.data.targets) if target in [i]]
+            sub_train_dataloader = DataLoader(Subset(self.data, train_indices),
                                               batch_size=int(self.num_samples),
                                               drop_last=True)
 
@@ -88,14 +77,12 @@ class MatrixConstruction:
 
             compute_chunk_of_matrices(x_train,
                                       representation,
-                                      self.epoch,
                                       i,
-                                      train=train,
                                       save_path=self.save_path,
                                       chunk_id=chunk_id,
                                       chunk_size=self.chunk_size)
 
-    def values_on_epoch(self, chunk_id: int, train=True) -> None:
+    def values_on_epoch(self, chunk_id: int) -> None:
         path = os.getcwd()
         directory = f"{self.weights_path}"
         new_path = os.path.join(path, directory)
@@ -103,7 +90,11 @@ class MatrixConstruction:
         model_path = os.path.join(new_path, model_file)
         state_dict = torch.load(model_path, map_location=torch.device('cpu'))
 
-        model = get_architecture(architecture_index=self.architecture_index, residual=self.residual)
+        input_shape = (3, 32, 32) if self.dataname == 'cifar10' else (1, 28, 28)
+        model = get_architecture(architecture_index=self.architecture_index,
+                                 residual=self.residual,
+                                 input_shape=input_shape,
+                                 )
         model.load_state_dict(state_dict)
 
-        self.compute_matrices_epoch_on_dataset(model, chunk_id=chunk_id, train=train)
+        self.compute_matrices_on_dataset(model, chunk_id=chunk_id)

@@ -1,15 +1,11 @@
 from utils.utils import get_ellipsoid_data, zero_std, get_model, subset, get_dataset
-
+import argparse
+import torch
+import json
 
 def parse_args(parser=None):
     if parser is None:
         parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--subset_size",
-        type=int,
-        default=10000,
-        help="Size of data subset to .",
-    )
     parser.add_argument(
         "--default_index",
         type=int,

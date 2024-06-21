@@ -19,7 +19,6 @@ ATTACKS = ["GN", "FGSM", "RFGSM", "PGD", "EOTPGD", "FFGSM", "TPGD", "MIFGSM", "U
            "PGDRS", "SINIFGSM", "VMIFGSM", "VNIFGSM", "CW", "PGDL2", "PGDRSL2", "DeepFool", "SparseFool",
            "OnePixel", "Pixle", "FAB"]
 
-
 DEFAULT_EXPERIMENTS = {
     'experiment_0': {
         'architecture_index': 0,
@@ -31,6 +30,8 @@ DEFAULT_EXPERIMENTS = {
         'reduce_lr_each': 5,
         'save_every_epochs': 2,
         'residual': False,
+        'weight_decay': 0,
+        'dropout': False,
     },
     'experiment_1': {
         'architecture_index': 0,
@@ -42,6 +43,8 @@ DEFAULT_EXPERIMENTS = {
         'reduce_lr_each': 5,
         'save_every_epochs': 2,
         'residual': False,
+        'weight_decay': 0,
+        'dropout': False,
     },
     'experiment_2': {
         'architecture_index': 0,
@@ -53,6 +56,8 @@ DEFAULT_EXPERIMENTS = {
         'reduce_lr_each': 20,
         'save_every_epochs': 10,
         'residual': False,
+        'weight_decay': 0,
+        'dropout': False,
     },
     'experiment_3': {
         'architecture_index': 0,
@@ -64,6 +69,8 @@ DEFAULT_EXPERIMENTS = {
         'reduce_lr_each': 20,
         'save_every_epochs': 10,
         'residual': False,
+        'weight_decay': 0,
+        'dropout': False,
     },
     'experiment_4': {
         'architecture_index': 1,
@@ -75,6 +82,8 @@ DEFAULT_EXPERIMENTS = {
         'reduce_lr_each': 20,
         'save_every_epochs': 5,
         'residual': True,
+        'weight_decay': 0,
+        'dropout': False,
     },
     'experiment_5': {
         'architecture_index': 2,
@@ -86,6 +95,8 @@ DEFAULT_EXPERIMENTS = {
         'reduce_lr_each': 5,
         'save_every_epochs': 5,
         'residual': False,
+        'weight_decay': 0,
+        'dropout': False,
     },
     'experiment_6': {
         'architecture_index': 3,
@@ -97,6 +108,8 @@ DEFAULT_EXPERIMENTS = {
         'reduce_lr_each': 5,
         'save_every_epochs': 1,
         'residual': False,
+        'weight_decay': 0,
+        'dropout': False,
     },
     'experiment_7': {
         'architecture_index': 3,
@@ -108,8 +121,10 @@ DEFAULT_EXPERIMENTS = {
         'reduce_lr_each': 5,
         'save_every_epochs': 1,
         'residual': False,
+        'weight_decay': 0,
+        'dropout': False,
     },
-    'experiment_8': { #TODO: check performance 99 train vs 60 test
+    'experiment_8': { #TODO: check performance 99 train vs 60 test, uses weight decay and drop out, the others dont
         'architecture_index': 3,
         'optimizer': 'momentum',
         'dataset': 'cifar10',
@@ -119,16 +134,33 @@ DEFAULT_EXPERIMENTS = {
         'reduce_lr_each': 20,
         'save_every_epochs': 1,
         'residual': False,
+        'weight_decay': 1e-5,
+        'dropout': True,
     },
     'experiment_9': { #TODO: check performance
-        'architecture_index': 5,
-        'optimizer': 'sgd',
+        'architecture_index': 4,
+        'optimizer': 'adam',
         'dataset': 'cifar10',
         'lr': 0.001,
-        'batch_size': 8,
+        'batch_size': 256,
         'epoch': 201,
         'reduce_lr_each': 40,
         'save_every_epochs': 50,
         'residual': False,
+        'weight_decay': 1e-5,
+        'dropout': True,
+    },
+    'experiment_10': { #TODO: check performance
+        'architecture_index': 5,
+        'optimizer': 'adam',
+        'dataset': 'cifar10',
+        'lr': 0.001,
+        'batch_size': 256,
+        'epoch': 201,
+        'reduce_lr_each': 40,
+        'save_every_epochs': 50,
+        'residual': False,
+        'weight_decay': 1e-5,
+        'dropout': True,
     }
 }
