@@ -8,4 +8,4 @@
 module load StdEnv/2020 scipy-stack/2023a #load the required module
 source ENV/bin/activate #load the virtualenv (absolute or relative path to where the script is submitted)
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
-python matrices_on_epoch.py --nb_workers=$SLURM_CPUS_PER_TASK --default_index 0
+python generate_adversarial_examples.py --nb_workers=$SLURM_CPUS_PER_TASK --default_index 0

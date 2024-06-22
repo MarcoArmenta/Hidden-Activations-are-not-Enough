@@ -35,10 +35,13 @@ def parse_args(parser=None):
 
 def apply_attack(attack_name, data, labels, weights_path, architecture_index, path_adv_examples, residual, input_shape):
     attack_save_path = path_adv_examples / f'{attack_name}/adversarial_examples.pth'
+
     if attack_save_path.exists():
         print(f"Loading attack {attack_name}")
         misclassified_images = torch.load(attack_save_path)
         return attack_name, misclassified_images
+
+    attack_save_path.parent.mkdir(parents=True, exist_ok=True)
 
     print(f"Attacking with {attack_name}", flush=True)
     model = get_model(weights_path, architecture_index, residual, input_shape)
@@ -74,7 +77,6 @@ def apply_attack(attack_name, data, labels, weights_path, architecture_index, pa
     attacked_data = attacks_classes[attack_name](data, labels)
 
     if attack_name == "test":
-        attack_save_path.parent.mkdir(parents=True, exist_ok=True)
         torch.save(attacked_data, attack_save_path)
         return attack_name, attacked_data
 
@@ -89,7 +91,6 @@ def apply_attack(attack_name, data, labels, weights_path, architecture_index, pa
     misclassified_indexes = labels != attacked_predictions
     misclassified_images = attacked_data[misclassified_indexes]
 
-    attack_save_path.parent.mkdir(parents=True, exist_ok=True)
     torch.save(misclassified_images, attack_save_path)
 
     return attack_name, misclassified_images
@@ -211,7 +212,7 @@ def main():
 
     input_shape = (3, 32, 32) if dataset == 'cifar10' else (1, 28, 28)
     _, test_set = get_dataset(dataset, data_loader=False)
-    exp_dataset_test, exp_labels_test = subset(test_set, 10) #len(test_set))
+    exp_dataset_test, exp_labels_test = subset(test_set, len(test_set), input_shape=input_shape)
 
     generate_adversarial_examples_and_their_matrices(exp_dataset_test,
                                                      exp_labels_test,
