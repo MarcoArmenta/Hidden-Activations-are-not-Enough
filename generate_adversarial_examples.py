@@ -206,10 +206,6 @@ def main():
     if not weights_path.exists():
         raise ValueError(f"Experiment needs to be trained")
 
-    matrices_path = Path(f'experiments/{args.default_index}/matrices/matrix_statistics.json')
-    if not matrices_path.exists():
-        raise ValueError(f"Matrix statistics have to be computed")
-
     input_shape = (3, 32, 32) if dataset == 'cifar10' else (1, 28, 28)
     _, test_set = get_dataset(dataset, data_loader=False)
     exp_dataset_test, exp_labels_test = subset(test_set, len(test_set), input_shape=input_shape)

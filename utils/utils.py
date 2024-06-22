@@ -78,7 +78,7 @@ def get_model(path, architecture_index, residual, input_shape):
 def find_matrices(base_dir):
     matrix_paths = {}
     for j in range(10):  # Considering subfolders '0' to '9'
-        matrices_path = os.path.join(base_dir, str(j), 'train')  # Only use training data
+        matrices_path = os.path.join(base_dir, str(j))  # Only use training data
         if os.path.exists(matrices_path):
             for i in os.listdir(matrices_path):  # Iterating through each 'i' subdirectory
                 matrix_file_path = os.path.join(matrices_path, i, 'matrix.pt')
@@ -102,6 +102,7 @@ def compute_statistics(matrix_paths):
         std_matrix = torch.std(stacked_matrices, dim=0)
         # Store the computed statistics
         statistics[j] = {'mean': mean_matrix, 'std': std_matrix}
+
     return statistics
 
 

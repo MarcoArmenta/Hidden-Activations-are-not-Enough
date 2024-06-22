@@ -38,7 +38,7 @@ def parse_args(parser=None):
     parser.add_argument(
         "--num_samples_rejection_level",
         type=int,
-        default=10,
+        default=10000,
         help="Number of train samples to compute rejection level.",
     )
 
@@ -68,7 +68,7 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
         file = open(reject_path)
         reject_at = json.load(file)[0]
     else:
-        print("Compute rejection level...")
+        print("Computing rejection level...")
         representation = MlpRepresentation(model)
         zeros = torch.Tensor()
         for i in range(len(exp_dataset_train)):
