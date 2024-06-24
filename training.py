@@ -6,6 +6,7 @@ import torch.optim as optim
 from constants.constants import DEFAULT_EXPERIMENTS
 from utils.utils import get_architecture, get_dataset, get_device
 from torch.optim.lr_scheduler import StepLR
+from pathlib import Path
 
 
 def parse_args():
@@ -20,6 +21,7 @@ def parse_args():
     parser.add_argument("--epochs", type=int, help="The number of epochs to train.")
     parser.add_argument("--reduce_lr_each", type=int, help="Reduce learning rate every this number of epochs.")
     parser.add_argument("--save_every_epochs", type=int, help="Save weights every this number of epochs.")
+    parser.add_argument("--from_checkpoint", action='store_true', help="Resume training from the last checkpoint.")
     return parser.parse_args()
 
 
@@ -95,8 +97,19 @@ def main():
 
     scheduler = StepLR(optimizer, step_size=reduce_lr_each, gamma=0.1)
 
+    start_epoch = 0
+    if args.from_checkpoint:
+        checkpoints_path = Path(f'experiments/{args.default_index}/weights/')
+        if checkpoints_path.exists():
+            checkpoints = list(checkpoints_path.glob('epoch_*.pth'))
+            if checkpoints:
+                latest_checkpoint = max(checkpoints, key=lambda cp: int(cp.stem.split('_')[1]))
+                model.load_state_dict(torch.load(latest_checkpoint))
+                start_epoch = int(latest_checkpoint.stem.split('_')[1]) + 1
+                print(f"Resuming training from epoch {start_epoch}")
+
     print("Training...", flush=True)
-    for epoch in range(epochs):
+    for epoch in range(start_epoch, epochs):
         train_one_epoch(model, train_loader, criterion, optimizer, device)
 
         train_loss, train_accuracy = evaluate_model(model, train_loader, criterion, device)
@@ -107,7 +120,7 @@ def main():
 
         scheduler.step()
 
-        if epoch % save_every_epochs == 0:
+        if epoch % save_every_epochs == 0 or epoch == epochs - 1:
             os.makedirs(f'experiments/{args.default_index}/weights/', exist_ok=True)
             torch.save(model.state_dict(), f'experiments/{args.default_index}/weights/epoch_{epoch}.pth')
 

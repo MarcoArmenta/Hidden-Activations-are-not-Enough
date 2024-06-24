@@ -55,7 +55,7 @@ class MLP(nn.Module):
             if batch_norm:
                 self.layers.append(nn.BatchNorm1d(self.layers_size[idx + 1]))
 
-            if dropout and idx % 2:
+            if dropout:
                 self.layers.append(nn.Dropout(0.5))
 
             self.layers.append(self.get_activation_fn()())
