@@ -41,11 +41,13 @@ def get_model(path, architecture_index, residual, input_shape, dropout):
     return model
 
 
-def get_dataset(data_set, batch_size=32, data_loader=True):
+def get_dataset(data_set, batch_size=32, data_loader=True, data_path=None):
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
+    if data_path is None:
+        data_path = './data'
     if data_set == 'mnist':
-        train_set = torchvision.datasets.MNIST(root='./data', train=True, transform=transform, download=True)
-        test_set = torchvision.datasets.MNIST(root='./data', train=False, transform=transform, download=True)
+        train_set = torchvision.datasets.MNIST(root=data_path, train=True, transform=transform, download=True)
+        test_set = torchvision.datasets.MNIST(root=data_path, train=False, transform=transform, download=True)
         if data_loader:
             train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True)
             test_loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size, shuffle=False)
@@ -53,8 +55,8 @@ def get_dataset(data_set, batch_size=32, data_loader=True):
         else:
             return train_set, test_set
     elif data_set == 'fashion':
-        train_set = torchvision.datasets.FashionMNIST(root='./data', train=True, transform=transform, download=True)
-        test_set = torchvision.datasets.FashionMNIST(root='./data', train=False, transform=transform, download=True)
+        train_set = torchvision.datasets.FashionMNIST(root=data_path, train=True, transform=transform, download=True)
+        test_set = torchvision.datasets.FashionMNIST(root=data_path, train=False, transform=transform, download=True)
         if data_loader:
             train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True)
             test_loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size, shuffle=False)
@@ -62,8 +64,8 @@ def get_dataset(data_set, batch_size=32, data_loader=True):
         else:
             return train_set, test_set
     elif data_set == 'cifar10':
-        train_set = torchvision.datasets.CIFAR10(root='./data', train=True, transform=transform, download=True)
-        test_set = torchvision.datasets.CIFAR10(root='./data', train=False, transform=transform, download=True)
+        train_set = torchvision.datasets.CIFAR10(root=data_path, train=True, transform=transform, download=True)
+        test_set = torchvision.datasets.CIFAR10(root=data_path, train=False, transform=transform, download=True)
         if data_loader:
             train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True)
             test_loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size, shuffle=False)

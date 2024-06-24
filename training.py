@@ -22,6 +22,7 @@ def parse_args():
     parser.add_argument("--reduce_lr_each", type=int, help="Reduce learning rate every this number of epochs.")
     parser.add_argument("--save_every_epochs", type=int, help="Save weights every this number of epochs.")
     parser.add_argument("--from_checkpoint", action='store_true', help="Resume training from the last checkpoint.")
+    parser.add_argument("--data_path", type=str, default=None, help="Path to the dataset.")
     return parser.parse_args()
 
 
@@ -79,7 +80,7 @@ def main():
         raise ValueError("Default index not specified in constants/constants.py")
 
     device = get_device()
-    train_loader, test_loader = get_dataset(dataset, batch_size, data_loader=True)
+    train_loader, test_loader = get_dataset(dataset, batch_size, data_loader=True, data_path=args.data_path)
     input_shape = (3, 32, 32) if dataset == 'cifar10' else (1, 28, 28)
     model = get_architecture(architecture_index=architecture_index,
                              residual=residual,
