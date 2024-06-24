@@ -56,6 +56,7 @@ class MatrixConstruction:
         self.save_path = dict_exp['save_path']
         self.architecture_index = dict_exp['architecture_index']
         self.residual = dict_exp['residual']
+        self.dropout = dict_exp['dropout']
 
         self.num_classes = 10
         self.data = get_dataset(self.dataname, data_loader=False)[0]
@@ -94,6 +95,7 @@ class MatrixConstruction:
         model = get_architecture(architecture_index=self.architecture_index,
                                  residual=self.residual,
                                  input_shape=input_shape,
+                                 dropout=self.dropout,
                                  )
         model.load_state_dict(state_dict)
 

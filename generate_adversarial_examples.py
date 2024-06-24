@@ -24,6 +24,12 @@ def parse_args(parser=None):
         help="Index of default trained network.",
     )
     parser.add_argument(
+        "--test_size",
+        type=int,
+        default=-1,
+        help="Size of subset of test data from where to generate adversarial examples.",
+    )
+    parser.add_argument(
         "--nb_workers",
         type=int,
         default=8,
@@ -33,7 +39,7 @@ def parse_args(parser=None):
     return parser.parse_args()
 
 
-def apply_attack(attack_name, data, labels, weights_path, architecture_index, path_adv_examples, residual, input_shape):
+def apply_attack(attack_name, data, labels, weights_path, architecture_index, path_adv_examples, residual, input_shape, dropout):
     attack_save_path = path_adv_examples / f'{attack_name}/adversarial_examples.pth'
 
     if attack_save_path.exists():
@@ -44,7 +50,7 @@ def apply_attack(attack_name, data, labels, weights_path, architecture_index, pa
     attack_save_path.parent.mkdir(parents=True, exist_ok=True)
 
     print(f"Attacking with {attack_name}", flush=True)
-    model = get_model(weights_path, architecture_index, residual, input_shape)
+    model = get_model(weights_path, architecture_index, residual, input_shape, dropout)
 
     attacks_classes = dict(zip(["test"] + ATTACKS,
                                [torchattacks.VANILA(model),
@@ -102,11 +108,12 @@ def generate_matrices_for_attacks(attack,
                                   weights_path,
                                   architecture_index,
                                   residual,
-                                  input_shape):
+                                  input_shape,
+                                  dropout):
     path_adv_examples = experiment_dir / f"{attack}/adversarial_examples.pth"
     attacked_dataset = torch.load(path_adv_examples)
 
-    model = get_model(weights_path, architecture_index, residual, input_shape)
+    model = get_model(weights_path, architecture_index, residual, input_shape, dropout)
     representation = MlpRepresentation(model)
     print(f"Generating matrices for attack {attack}.", flush=True)
 
@@ -127,7 +134,8 @@ def generate_adversarial_examples_and_their_matrices(exp_dataset_test: torch.Ten
                                                      experiment,
                                                      nb_workers,
                                                      residual,
-                                                     input_shape
+                                                     input_shape,
+                                                     dropout
                                                      ):
 
     experiment_dir = Path(f'experiments/{experiment}/adversarial_examples')
@@ -146,7 +154,8 @@ def generate_adversarial_examples_and_their_matrices(exp_dataset_test: torch.Ten
                   architecture_index,
                   experiment_dir,
                   residual,
-                  input_shape)
+                  input_shape,
+                  dropout)
                  for attack_name in ["test"] + ATTACKS]
 
     if os.path.exists(path_adv_examples):
@@ -171,7 +180,8 @@ def generate_adversarial_examples_and_their_matrices(exp_dataset_test: torch.Ten
                   weights_path,
                   architecture_index,
                   residual,
-                  input_shape)
+                  input_shape,
+                  dropout)
                  for attack in ["test"] + ATTACKS]
 
     print("Generating adversarial matrices...", flush=True)
@@ -188,6 +198,7 @@ def main():
 
             architecture_index = experiment['architecture_index']
             residual = experiment['residual']
+            dropout = experiment['dropout']
             dataset = experiment['dataset']
             epoch = experiment['epoch'] - 1
 
@@ -208,7 +219,8 @@ def main():
 
     input_shape = (3, 32, 32) if dataset == 'cifar10' else (1, 28, 28)
     _, test_set = get_dataset(dataset, data_loader=False)
-    exp_dataset_test, exp_labels_test = subset(test_set, len(test_set), input_shape=input_shape)
+    test_size = len(test_set) if args.test_size == -1 else args.test_size
+    exp_dataset_test, exp_labels_test = subset(test_set, test_size, input_shape=input_shape)
 
     generate_adversarial_examples_and_their_matrices(exp_dataset_test,
                                                      exp_labels_test,
@@ -217,7 +229,8 @@ def main():
                                                      experiment=args.default_index,
                                                      nb_workers=args.nb_workers,
                                                      residual=residual,
-                                                     input_shape=input_shape)
+                                                     input_shape=input_shape,
+                                                     dropout=dropout)
 
 
 if __name__ == "__main__":

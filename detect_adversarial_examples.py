@@ -6,6 +6,7 @@ import argparse
 import torch
 import json
 import os
+from multiprocessing import Pool
 
 
 def parse_args(parser=None):
@@ -41,8 +42,37 @@ def parse_args(parser=None):
         default=10000,
         help="Number of train samples to compute rejection level.",
     )
+    parser.add_argument(
+        "--nb_workers",
+        type=int,
+        default=8,
+        help="How many processes in parallel for adversarial examples computations.",
+    )
 
     return parser.parse_args()
+
+
+def process_sample(args):
+    im, label, weights_path, architecture_index, residual, input_shape, ellipsoids, d1, default_index, dropout, i = args
+    path_experiment_matrix = Path(f'experiments/{default_index}/matrices/zero_counting/{i}/matrix.pth')
+    Path(f'experiments/{default_index}/matrices/zero_counting/{i}/').mkdir(parents=True, exist_ok=True)
+
+    model = get_model(weights_path, architecture_index, residual, input_shape, dropout)
+    representation = MlpRepresentation(model)
+    pred = torch.argmax(model.forward(im))
+    if pred != label:
+        return None
+
+    if os.path.exists(path_experiment_matrix):
+        mat = torch.load(path_experiment_matrix)
+    else:
+        mat = representation.forward(im)
+        torch.save(mat, path_experiment_matrix)
+
+    a = get_ellipsoid_data(ellipsoids, pred, "std")
+    b = zero_std(mat, a, d1)
+    c = b.expand([1])
+    return c
 
 
 def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
@@ -52,16 +82,19 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
                              architecture_index,
                              residual,
                              input_shape,
+                             dropout,
                              ellipsoids: dict,
                              num_samples_rejection_level: int = 5000,
                              std: float = 2,
                              d1: float = 0.1,
                              d2: float = 0.1,
+                             nb_workers: int = 8,
                              verbose: bool = True) -> None:
 
     # Compute mean and std of number of (almost) zero dims
     reject_path = f'experiments/{default_index}/rejection_levels/reject_at_{num_samples_rejection_level}_{std}_{d1}.json'
-    model = get_model(weights_path, architecture_index, residual, input_shape)
+    Path(f'experiments/{default_index}/rejection_levels/').mkdir(parents=True, exist_ok=True)
+    model = get_model(weights_path, architecture_index, residual, input_shape, dropout)
 
     if os.path.exists(reject_path):
         print("Loading rejection level...")
@@ -69,20 +102,22 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
         reject_at = json.load(file)[0]
     else:
         print("Computing rejection level...")
-        representation = MlpRepresentation(model)
-        zeros = torch.Tensor()
-        for i in range(len(exp_dataset_train)):
-            im = exp_dataset_train[i]
-            pred = torch.argmax(model.forward(im))
-            if pred != exp_dataset_labels[i]:
-                continue
 
-            mat = representation.forward(im)
+        with Pool(processes=nb_workers) as pool:
+            args = [(exp_dataset_train[i],
+                     exp_dataset_labels[i],
+                     weights_path,
+                     architecture_index,
+                     residual,
+                     input_shape,
+                     ellipsoids,
+                     d1,
+                     default_index,
+                     dropout,
+                     i) for i in range(len(exp_dataset_train))]
+            results = pool.map(process_sample, args)
 
-            a = get_ellipsoid_data(ellipsoids, pred, "std")
-            b = zero_std(mat, a, d1)
-            c = b.expand([1])
-            zeros = torch.cat((zeros, c))
+        zeros = torch.cat([result for result in results if result is not None]).float()
 
         reject_at = zeros.mean().item() - std*zeros.std().item()
 
@@ -144,11 +179,12 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
         if verbose:
             print("Attack method: ", a)
             if a == 'test':
-                print(f'Wrong rejections : {rejected_and_not_attacked} out of {len(attacked_dataset[a])}')
+                print(f'Wrongly rejected test data : {rejected_and_not_attacked} out of {len(attacked_dataset[a])}')
                 print(f'Trusted test data : {not_rejected_and_not_attacked} out of {len(attacked_dataset[a])}')
 
-            print(f'Detected adversarial examples : {rejected_and_attacked} out of {len(attacked_dataset[a])}')
-            print(f'Successful adversarial examples : {not_rejected_and_attacked} out of {len(attacked_dataset[a])}')
+            else:
+                print(f'Detected adversarial examples : {rejected_and_attacked} out of {len(attacked_dataset[a])}')
+                print(f'Successful adversarial examples : {not_rejected_and_attacked} out of {len(attacked_dataset[a])}')
 
     counts_file = f'experiments/{default_index}/adversarial_examples/number_of_detections_per_attack.json'
     with open(counts_file, 'w') as json_file:
@@ -170,12 +206,18 @@ def reject_predicted_attacks(exp_dataset_train: torch.Tensor,
     num_attacked_samples = torch.tensor([len(attacked_dataset[key]) for key in ["test"] + ATTACKS], dtype=torch.float)
     normalized_counts = counts_tensor / num_attacked_samples
     probabilities = {key: normalized_counts[i].item() for i, key in enumerate(["test"] + ATTACKS)}
-    probs = f'experiments/{default_index}/adversarial_examples/prob-adv-success-per-attack_{num_samples_rejection_level}_{std}_{d1}_{d2}.json'
+
+    Path(f'experiments/{default_index}/adversarial_examples/probabilities_adv_success/').mkdir(parents=True,
+                                                                                               exist_ok=True)
+    probs = f'experiments/{default_index}/adversarial_examples/probabilities_adv_success/' \
+            f'prob-adv-success-per-attack_{num_samples_rejection_level}_{std}_{d1}_{d2}.json'
     with open(probs, 'w') as json_file:
         json.dump(probabilities, json_file, indent=4)  # indent=4 is optional, for pretty printing
 
+    Path(f'experiments/{default_index}/adversarial_examples/adversarial_success').mkdir(parents=True, exist_ok=True)
     torch.save(adv_succes,
-               f'experiments/{default_index}/adversarial_examples/adversarial_success/adv_success_{num_samples_rejection_level}_{std}_{d1}_{d2}.pth')
+               f'experiments/{default_index}/adversarial_examples/adversarial_success/'
+               f'adv_success_{num_samples_rejection_level}_{std}_{d1}_{d2}.pth')
 
 
 def main():
@@ -186,6 +228,7 @@ def main():
 
             architecture_index = experiment['architecture_index']
             residual = experiment['residual']
+            dropout = experiment['dropout']
             dataset = experiment['dataset']
             epoch = experiment['epoch'] - 1
 
@@ -208,7 +251,7 @@ def main():
 
     input_shape = (3, 32, 32) if dataset == 'cifar10' else (1, 28, 28)
     train_set, test_set = get_dataset(dataset, data_loader=False)
-    exp_dataset_train, exp_dataset_labels = subset(train_set, args.num_samples_rejection_level)
+    exp_dataset_train, exp_dataset_labels = subset(train_set, args.num_samples_rejection_level, input_shape=input_shape)
 
     ellipsoids_file = open(f"experiments/{args.default_index}/matrices/matrix_statistics.json")
     ellipsoids = json.load(ellipsoids_file)
@@ -220,11 +263,13 @@ def main():
                              architecture_index,
                              residual,
                              input_shape,
+                             dropout,
                              ellipsoids,
                              args.num_samples_rejection_level,
                              args.std,
                              args.d1,
                              args.d2,
+                             args.nb_workers,
                              verbose=True)
 
 

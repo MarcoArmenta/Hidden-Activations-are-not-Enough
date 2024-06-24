@@ -5,6 +5,7 @@ from multiprocessing import Pool, Manager
 import os
 import pandas as pd
 from constants.constants import DEFAULT_EXPERIMENTS
+from pathlib import Path
 
 
 def parse_args(parser=None):
@@ -12,21 +13,30 @@ def parse_args(parser=None):
         parser = argparse.ArgumentParser()
     parser.add_argument(
         "--std_values",
-        type=list,
+        type=float,
+        nargs='+',
         default=[0.75, 1, 1.5, 2],
         help="The values of std to sweep",
     )
     parser.add_argument(
         "--d1_values",
-        type=list,
+        type=float,
+        nargs='+',
         default=[0.01, 0.1, 0.3, 0.5, 0.8, 1],
         help="The values of d1 to sweep",
     )
     parser.add_argument(
         "--d2_values",
-        type=list,
+        type=float,
+        nargs='+',
         default=[0.01, 0.1, 0.3, 0.5, 0.8, 1],
         help="The values of d2 to sweep",
+    )
+    parser.add_argument(
+        "--output_file",
+        type=str,
+        default='grid_search.txt',
+        help="The file name to save the grid search result",
     )
     parser.add_argument(
         "--default_index",
@@ -37,7 +47,7 @@ def parse_args(parser=None):
     parser.add_argument(
         "--nb_workers",
         type=int,
-        default=1,
+        default=8,
         help="Number of threads for parallel computation",
     )
 
@@ -71,8 +81,7 @@ def run_adv_examples_script(params):
         return
 
     cmd = f"source ~/NeuralNets/MatrixStatistics/matrix/bin/activate &&" \
-          f" python adversarial_attacks.py --std {std} --d1 {d1} --d2 {d2} " \
-          f"--default_hyper_parameters " \
+          f" python detect_adversarial_examples.py --std {std} --d1 {d1} --d2 {d2} " \
           f"--default_index {index}"
     result = subprocess.run(
         cmd, shell=True, capture_output=True, text=True, executable="/bin/bash"
@@ -107,47 +116,34 @@ def run_adv_examples_script(params):
 
 def main():
     args = parse_args()
-    if args.default_index is not None:
-        try:
-            experiment = DEFAULT_EXPERIMENTS[f'experiment_{args.default_index}']
-            architecture_index = experiment['architecture_index']
-            dataset = experiment['dataset']
-            optimizer_name = experiment['optimizer']
-            lr = experiment['lr']
-            batch_size = experiment['batch_size']
 
-        except KeyError:
-            print(f"Error: Default index {args.default_index} does not exist.")
-            print(f"When computing matrices of new model, add the experiment to constants.constants.py inside DEFAULT_EXPERIMENTS"
-                  f"and provide the corresponding --default_index when running this script.")
-            return
+    experiment_path = Path(f'experiments/{args.default_index}/adversarial_examples/')
+    experiment_path.mkdir(parents=True, exist_ok=True)
+    output_file = experiment_path / f'grid_search_{args.default_index}.txt'
 
-        experiment_path = f'experiments/adversarial_examples/{dataset}/{architecture_index}/{optimizer_name}/{lr}/{batch_size}'
-        output_file = experiment_path + f'/grid_search_{args.default_index}.txt'
+    # Define the parameter grid
+    std_values = args.std_values
+    d1_values = args.d1_values
+    d2_values = args.d2_values
+    indexes = [args.default_index]
 
-        # Define the parameter grid
-        std_values = args.std_values
-        d1_values = args.d1_values
-        d2_values = args.d2_values
-        indexes = [args.default_index]
+    param_grid = list(itertools.product(std_values, d1_values, d2_values, indexes))
 
-        param_grid = list(itertools.product(std_values, d1_values, d2_values, indexes))
+    # Use Manager to create a Lock
+    with Manager() as manager:
+        lock = manager.Lock()
 
-        # Use Manager to create a Lock
-        with Manager() as manager:
-            lock = manager.Lock()
+        # Initialize the output file if it doesn't exist
+        if not os.path.exists(output_file):
+            with open(output_file, 'w') as f:
+                f.write("std,d1,d2,default_index,good_defence,wrong_rejection\n")
 
-            # Initialize the output file if it doesn't exist
-            if not os.path.exists(output_file):
-                with open(output_file, 'w') as f:
-                    f.write("std,d1,d2,default_index,good_defence,wrong_rejection\n")
+        # Prepare arguments for the workers
+        param_grid_with_lock = [(std, d1, d2, index, lock, output_file) for std, d1, d2, index in param_grid]
 
-            # Prepare arguments for the workers
-            param_grid_with_lock = [(std, d1, d2, index, lock, args.output_file) for std, d1, d2, index in param_grid]
-
-            # Use multiprocessing Pool to run the scripts in parallel
-            with Pool(processes=args.nb_workers) as pool:
-                pool.map(run_adv_examples_script, param_grid_with_lock)
+        # Use multiprocessing Pool to run the scripts in parallel
+        with Pool(processes=args.nb_workers) as pool:
+            pool.map(run_adv_examples_script, param_grid_with_lock)
 
 
 if __name__ == "__main__":

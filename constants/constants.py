@@ -162,5 +162,18 @@ DEFAULT_EXPERIMENTS = {
         'residual': False,
         'weight_decay': 1e-5,
         'dropout': True,
+    },
+    'experiment_11': { #TODO: this is a check on cifar only, does NOT learn
+        'architecture_index': 5,
+        'optimizer': 'adam',
+        'dataset': 'cifar10',
+        'lr': 0.001,
+        'batch_size': 256,
+        'epoch': 1,
+        'reduce_lr_each': 40,
+        'save_every_epochs': 1,
+        'residual': False,
+        'weight_decay': 1e-5,
+        'dropout': True,
     }
 }

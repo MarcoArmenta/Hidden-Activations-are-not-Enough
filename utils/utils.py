@@ -31,6 +31,16 @@ def get_architecture(input_shape=(1, 28, 28), num_classes=10, architecture_index
     return model
 
 
+def get_model(path, architecture_index, residual, input_shape, dropout):
+    weight_path = torch.load(str(path), map_location=torch.device('cpu'))
+    model = get_architecture(architecture_index=architecture_index,
+                             residual=residual,
+                             input_shape=input_shape,
+                             dropout=dropout)
+    model.load_state_dict(weight_path)
+    return model
+
+
 def get_dataset(data_set, batch_size=32, data_loader=True):
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
     if data_set == 'mnist':
@@ -63,15 +73,6 @@ def get_dataset(data_set, batch_size=32, data_loader=True):
     else:
         print(f"Dataset {data_set} not supported...")
         exit(1)
-
-
-def get_model(path, architecture_index, residual, input_shape):
-    weight_path = torch.load(str(path), map_location=torch.device('cpu'))
-    model = get_architecture(architecture_index=architecture_index,
-                             residual=residual,
-                             input_shape=input_shape)
-    model.load_state_dict(weight_path)
-    return model
 
 
 # Function to accurately locate matrix.pt files for training data

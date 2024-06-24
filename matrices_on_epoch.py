@@ -33,6 +33,7 @@ def main():
             dataset = experiment['dataset']
             architecture_index = experiment['architecture_index']
             residual = experiment['residual']
+            dropout = experiment['dropout']
             num_samples = args.num_samples_per_class
 
         except KeyError:
@@ -58,7 +59,8 @@ def main():
                 'num_samples': num_samples,
                 'chunk_size': chunk_size,
                 'architecture_index': architecture_index,
-                'residual': residual
+                'residual': residual,
+                'dropout': dropout,
                 }
 
     exp = MatrixConstruction(dict_exp)
