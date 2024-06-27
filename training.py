@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import torch
 import torch.nn as nn
@@ -11,7 +12,7 @@ from pathlib import Path
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--default_index", type=int, default=0, help="The index for default experiment")
+    parser.add_argument("--default_index", type=int, default=17, help="The index for default experiment")
     parser.add_argument("--architecture_index", type=int, help="The index of the architecture to train.")
     parser.add_argument("--residual", type=int, help="Residual connections in the architecture every 4 layers.")
     parser.add_argument("--dataset", type=str, help="The dataset to train the model on.")
@@ -109,12 +110,22 @@ def main():
                 start_epoch = int(latest_checkpoint.stem.split('_')[1]) + 1
                 print(f"Resuming training from epoch {start_epoch}")
 
+    history = {'train_acc':[],
+               'test_acc':[],
+               'train_loss':[],
+               'test_loss':[]}
+
     print("Training...", flush=True)
     for epoch in range(start_epoch, epochs):
         train_one_epoch(model, train_loader, criterion, optimizer, device)
 
         train_loss, train_accuracy = evaluate_model(model, train_loader, criterion, device)
         test_loss, test_accuracy = evaluate_model(model, test_loader, criterion, device)
+
+        history['train_acc'].append(train_accuracy)
+        history['test_acc'].append(test_accuracy)
+        history['train_loss'].append(train_loss)
+        history['test_loss'].append(test_loss)
 
         print(f"Epoch {epoch}/{epochs}, Train Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}, "
               f"Train Accuracy: {train_accuracy:.4f}, Test Accuracy: {test_accuracy:.4f}")
@@ -125,6 +136,8 @@ def main():
             os.makedirs(f'experiments/{args.default_index}/weights/', exist_ok=True)
             torch.save(model.state_dict(), f'experiments/{args.default_index}/weights/epoch_{epoch}.pth')
 
+        with open(f'experiments/{args.default_index}/weights/history.json', 'w') as json_file:
+            json.dump(history, json_file, indent=4)
 
 if __name__ == "__main__":
     main()

@@ -98,7 +98,7 @@ class MLP(nn.Module):
 
             elif isinstance(layer, (nn.ReLU, nn.Tanh, nn.ELU, nn.LeakyReLU, nn.PReLU, nn.Sigmoid)):
                 if self.residual:
-                    if cont % 4 == 0:  # Add the saved input after a residual pair
+                    if cont % 2 == 0:  # Add the saved input after a residual pair
                         x = x + x_res
                         x = layer(x)
                         x_res = x
