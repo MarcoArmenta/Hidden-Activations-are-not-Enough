@@ -59,7 +59,7 @@ DEFAULT_EXPERIMENTS = {
         'dataset': 'fashion',
         'lr': 1e-06,
         'batch_size': 32,
-        'epoch': 81,
+        'epoch': 81, # 21
         'reduce_lr_each': 20,
         'save_every_epochs': 10,
         'residual': False,
@@ -72,7 +72,7 @@ DEFAULT_EXPERIMENTS = {
         'dataset': 'fashion',
         'lr': 0.1,
         'batch_size': 16,
-        'epoch': 51,
+        'epoch': 51, # 35
         'reduce_lr_each': 20,
         'save_every_epochs': 10,
         'residual': False,
@@ -124,14 +124,14 @@ DEFAULT_EXPERIMENTS = {
         'dataset': 'fashion',
         'lr': 0.0001,
         'batch_size': 16,
-        'epoch': 41,
+        'epoch': 41, # 11
         'reduce_lr_each': 5,
         'save_every_epochs': 5,
         'residual': True,
         'weight_decay': 0,
         'dropout': False,
     },
-    'experiment_8': {
+    'experiment_8': { # TODO: does not learn
         'architecture_index': 2,
         'optimizer': 'adam',
         'dataset': 'mnist',
@@ -145,19 +145,6 @@ DEFAULT_EXPERIMENTS = {
         'dropout': False,
     },
     'experiment_9': {
-        'architecture_index': 2,
-        'optimizer': 'adam',
-        'dataset': 'fashion',
-        'lr': 0.001,
-        'batch_size': 16,
-        'epoch': 11,
-        'reduce_lr_each': 5,
-        'save_every_epochs': 5,
-        'residual': False,
-        'weight_decay': 0,
-        'dropout': False,
-    },
-    'experiment_10': {
         'architecture_index': 3,
         'optimizer': 'momentum',
         'dataset': 'mnist',
@@ -170,7 +157,7 @@ DEFAULT_EXPERIMENTS = {
         'weight_decay': 0,
         'dropout': False,
     },
-    'experiment_11': {
+    'experiment_10': {
         'architecture_index': 3,
         'optimizer': 'momentum',
         'dataset': 'fashion',
@@ -183,7 +170,7 @@ DEFAULT_EXPERIMENTS = {
         'weight_decay': 0,
         'dropout': False,
     },
-    'experiment_12': {
+    'experiment_11': {
         'architecture_index': 4,
         'optimizer': 'sgd',
         'dataset': 'mnist',
@@ -196,7 +183,7 @@ DEFAULT_EXPERIMENTS = {
         'weight_decay': 0,
         'dropout': False,
     },
-    'experiment_13': {
+    'experiment_12': {
         'architecture_index': 4,
         'optimizer': 'sgd',
         'dataset': 'fashion',

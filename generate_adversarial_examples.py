@@ -1,5 +1,5 @@
 """
-    Creates adversarial examples and tries to detect them using matrix statistics
+    Creates adversarial examples
 """
 import os
 import json
@@ -9,7 +9,6 @@ import argparse
 from multiprocessing import Pool
 from pathlib import Path
 
-from matrix_construction.representation import MlpRepresentation
 from utils.utils import get_model, get_dataset, subset
 from constants.constants import DEFAULT_EXPERIMENTS, ATTACKS
 
@@ -84,14 +83,14 @@ def apply_attack(attack_name, data, labels, weights_path, architecture_index, pa
 
     if attack_name == "test":
         torch.save(attacked_data, attack_save_path)
+        torch.save(labels, path_adv_examples / f'{attack_name}/labels.pth')
         return attack_name, attacked_data
 
     attacked_predictions = torch.argmax(model(attacked_data), dim=1)
     misclassified = (labels != attacked_predictions).sum().item()
     total = data.size(0)
 
-    print(f"Attack: {attack_name}", flush=True)
-    print(f"Misclassified after attack: {misclassified} out of {total}", flush=True)
+    print(f"Attack: {attack_name}. Misclassified after attack: {misclassified} out of {total}.", flush=True)
 
     # Filter only the attacked images where labels != attacked_predictions
     misclassified_indexes = labels != attacked_predictions
@@ -102,41 +101,16 @@ def apply_attack(attack_name, data, labels, weights_path, architecture_index, pa
     return attack_name, misclassified_images
 
 
-def generate_matrices_for_attacks(attack,
-                                  path_adv_matrices,
-                                  experiment_dir,
+def generate_adversarial_examples(exp_dataset_test: torch.Tensor,
+                                  exp_labels_test: torch.Tensor,
                                   weights_path,
                                   architecture_index,
+                                  experiment,
+                                  nb_workers,
                                   residual,
                                   input_shape,
-                                  dropout):
-    path_adv_examples = experiment_dir / f"{attack}/adversarial_examples.pth"
-    attacked_dataset = torch.load(path_adv_examples)
-
-    model = get_model(weights_path, architecture_index, residual, input_shape, dropout)
-    representation = MlpRepresentation(model)
-    print(f"Generating matrices for attack {attack}.", flush=True)
-
-    for i in range(len(attacked_dataset)):
-        im = attacked_dataset[i]
-        matrix_save_path = path_adv_matrices / f'{attack}' / f'{i}/matrix.pth'
-        matrix_save_path.parent.mkdir(parents=True, exist_ok=True)
-        if not matrix_save_path.exists():
-            mat = representation.forward(im)
-            torch.save(mat, matrix_save_path)
-    print(f"Matrices for attack {attack} finished.", flush=True)
-
-
-def generate_adversarial_examples_and_their_matrices(exp_dataset_test: torch.Tensor,
-                                                     exp_labels_test: torch.Tensor,
-                                                     weights_path,
-                                                     architecture_index,
-                                                     experiment,
-                                                     nb_workers,
-                                                     residual,
-                                                     input_shape,
-                                                     dropout
-                                                     ):
+                                  dropout
+                                  ):
 
     experiment_dir = Path(f'experiments/{experiment}/adversarial_examples')
     experiment_dir.mkdir(parents=True, exist_ok=True)
@@ -171,24 +145,6 @@ def generate_adversarial_examples_and_their_matrices(exp_dataset_test: torch.Ten
     with number_of_attacks_path.open('w') as json_file:
         json.dump(nb_attacks, json_file, indent=4)
 
-    path_adv_matrices = Path(f'experiments/{experiment}/adversarial_matrices/')
-    path_adv_matrices.mkdir(parents=True, exist_ok=True)
-
-    arguments = [(attack,
-                  path_adv_matrices,
-                  experiment_dir,
-                  weights_path,
-                  architecture_index,
-                  residual,
-                  input_shape,
-                  dropout)
-                 for attack in ["test"] + ATTACKS]
-
-    print("Generating adversarial matrices...", flush=True)
-
-    with Pool(processes=nb_workers) as pool:
-        pool.starmap(generate_matrices_for_attacks, arguments)
-
 
 def main():
     args = parse_args()
@@ -205,7 +161,7 @@ def main():
         except KeyError:
             print(f"Error: Default index {args.default_index} does not exist.")
             print(f"When computing adversarial examples of new model, add the experiment to constants.constants.py inside DEFAULT_EXPERIMENTS"
-                  f"and provide the corresponding --default_index N when running this script.")
+                  f"and provide the corresponding --default_index when running this script.")
             return -1
 
     else:
@@ -222,15 +178,15 @@ def main():
     test_size = len(test_set) if args.test_size == -1 else args.test_size
     exp_dataset_test, exp_labels_test = subset(test_set, test_size, input_shape=input_shape)
 
-    generate_adversarial_examples_and_their_matrices(exp_dataset_test,
-                                                     exp_labels_test,
-                                                     weights_path,
-                                                     architecture_index,
-                                                     experiment=args.default_index,
-                                                     nb_workers=args.nb_workers,
-                                                     residual=residual,
-                                                     input_shape=input_shape,
-                                                     dropout=dropout)
+    generate_adversarial_examples(exp_dataset_test,
+                                  exp_labels_test,
+                                  weights_path,
+                                  architecture_index,
+                                  experiment=args.default_index,
+                                  nb_workers=args.nb_workers,
+                                  residual=residual,
+                                  input_shape=input_shape,
+                                  dropout=dropout)
 
 
 if __name__ == "__main__":

@@ -4,7 +4,6 @@ import argparse
 from multiprocessing import Pool, Manager
 import os
 import pandas as pd
-from constants.constants import DEFAULT_EXPERIMENTS
 from pathlib import Path
 
 
@@ -31,12 +30,6 @@ def parse_args(parser=None):
         nargs='+',
         default=[0.01, 0.1, 0.3, 0.5, 0.8, 1],
         help="The values of d2 to sweep",
-    )
-    parser.add_argument(
-        "--output_file",
-        type=str,
-        default='grid_search.txt',
-        help="The file name to save the grid search result",
     )
     parser.add_argument(
         "--default_index",
@@ -79,6 +72,13 @@ def run_adv_examples_script(params):
     if check_param_combination_exists(output_file, std, d1, d2, index):
         print(f"Skipping existing params: std={std}, d1={d1}, d2={d2}, default_index={index}")
         return
+    # TODO: should compute rejection level only once for all d2 possible
+    cmd = f"source ~/NeuralNets/MatrixStatistics/matrix/bin/activate &&" \
+          f" python compute_rejection_level.py --std {std} --d1 {d1} " \
+          f"--default_index {index}"
+    subprocess.run(
+        cmd, shell=True, capture_output=True, text=True, executable="/bin/bash"
+    )
 
     cmd = f"source ~/NeuralNets/MatrixStatistics/matrix/bin/activate &&" \
           f" python detect_adversarial_examples.py --std {std} --d1 {d1} --d2 {d2} " \
@@ -88,23 +88,22 @@ def run_adv_examples_script(params):
     )
 
     if result.returncode != 0:
-        print(f"Error running script with params {params}: {result.stderr}")
-        result_line = f"{std},{d1},{d2},{index},ERROR\n"
-    else:
-        # Extract the metrics from the output
-        output_lines = result.stdout.split('\n')
-        good_defences = None
-        wrong_rejection = None
-        for line in output_lines:
-            if "Percentage of good defences" in line:
-                good_defences = float(line.split()[-1].strip(':'))
-            if "Percentage of wrong rejections" in line:
-                wrong_rejection = float(line.split()[-1].strip(':'))
+        raise ValueError(f"Error running script with params {params}: {result.stderr}")
 
-        if good_defences is not None and wrong_rejection is not None:
-            result_line = f"{std},{d1},{d2},default {index},{good_defences},{wrong_rejection}\n"
-        else:
-            result_line = f"{std},{d1},{d2},default {index},None\n"
+    # Extract the metrics from the output
+    output_lines = result.stdout.split('\n')
+    good_defences = None
+    wrong_rejection = None
+    for line in output_lines:
+        if "Percentage of good defences" in line:
+            good_defences = float(line.split()[-1].strip(':'))
+        if "Percentage of wrong rejections" in line:
+            wrong_rejection = float(line.split()[-1].strip(':'))
+
+    if good_defences is not None and wrong_rejection is not None:
+        result_line = f"{std},{d1},{d2},default {index},{good_defences},{wrong_rejection}\n"
+    else:
+        result_line = f"{std},{d1},{d2},default {index},None\n"
 
     print(result_line.strip())
 
@@ -117,7 +116,7 @@ def run_adv_examples_script(params):
 def main():
     args = parse_args()
 
-    experiment_path = Path(f'experiments/{args.default_index}/adversarial_examples/')
+    experiment_path = Path(f'experiments/{args.default_index}/grid_search/')
     experiment_path.mkdir(parents=True, exist_ok=True)
     output_file = experiment_path / f'grid_search_{args.default_index}.txt'
 
