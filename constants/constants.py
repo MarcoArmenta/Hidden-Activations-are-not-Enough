@@ -1,22 +1,26 @@
-ARCHITECTURES = [# 0
+ARCHITECTURES = [# 0 -> 0, 1, 2, 3
                  (500, 500, 500, 500, 500),
-                 # 1
+                 # 1 -> 4, 5, 6
                  (1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000),
-                 # 2
+                 # 2 -> 7, 8, 9
                  (1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000,
                   1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000),
-                 # 3
+                 # 3 -> 10, 11,
                  (10000, 10000),
-                 # 4
+                 # 4 -> 12, 13
                  (10000, 10000, 10000, 10000, 10000),
-                 # 5
-                 (10000, 9000, 8000, 7000, 6000, 5000, 4000, 3000, 2000, 1000),
-                 # 6
-                 (675000, 1500, 1500, 1500, 1500)
+                 # 5 -> 14, 15
+                 (675000, 1500, 1500, 1500, 1500),
+                 # 6 -> 16, 17
+                 (2500000, )
                  ]
-
+# TODO: the more MLPs the better
+# TODO: add validation set
 # TODO: Train BIG mlp for a lot of time
 # TODO: pretrained mlps on the internet
+
+# TODO: ignore cifar10 for now...
+# TODO: data augmentation for cifar10 performance
 
 ATTACKS = ["GN", "FGSM", "RFGSM", "PGD", "EOTPGD", "FFGSM", "TPGD", "MIFGSM", "UPGD", "DIFGSM", "NIFGSM",
            "PGDRS", "SINIFGSM", "VMIFGSM", "VNIFGSM", "CW", "PGDL2", "PGDRSL2", "DeepFool", "SparseFool",
@@ -179,20 +183,7 @@ DEFAULT_EXPERIMENTS = {
         'weight_decay': 0,
         'dropout': False,
     },
-    'experiment_12': { #overfits 99 train vs 60 test
-        'architecture_index': 3,
-        'optimizer': 'momentum',
-        'dataset': 'cifar10',
-        'lr': 0.01,
-        'batch_size': 64,
-        'epoch': 101,
-        'reduce_lr_each': 20,
-        'save_every_epochs': 1,
-        'residual': False,
-        'weight_decay': 1e-5,
-        'dropout': True,
-    },
-    'experiment_13': {
+    'experiment_12': {
         'architecture_index': 4,
         'optimizer': 'sgd',
         'dataset': 'mnist',
@@ -205,7 +196,7 @@ DEFAULT_EXPERIMENTS = {
         'weight_decay': 0,
         'dropout': False,
     },
-    'experiment_14': {
+    'experiment_13': {
         'architecture_index': 4,
         'optimizer': 'sgd',
         'dataset': 'fashion',
@@ -218,73 +209,8 @@ DEFAULT_EXPERIMENTS = {
         'weight_decay': 0,
         'dropout': False,
     },
-    'experiment_15': { #overfits: 97.3 vs 57.78
-        'architecture_index': 4,
-        'optimizer': 'adam',
-        'dataset': 'cifar10',
-        'lr': 0.001,
-        'batch_size': 256,
-        'epoch': 201,
-        'reduce_lr_each': 40,
-        'save_every_epochs': 10,
-        'residual': False,
-        'weight_decay': 1e-5,
-        'dropout': True,
-    },
-    'experiment_16': { #TODO: check performance
+    'experiment_14': { #TODO: this only trains on 40 GBs GPU
         'architecture_index': 5,
-        'optimizer': 'sgd',
-        'dataset': 'mnist',
-        'lr': 0.01,
-        'batch_size': 16,
-        'epoch': 10,
-        'reduce_lr_each': 40,
-        'save_every_epochs': 1,
-        'residual': False,
-        'weight_decay': 0,
-        'dropout': False,
-    },
-    'experiment_17': { #TODO: check performance
-        'architecture_index': 5,
-        'optimizer': 'sgd',
-        'dataset': 'fashion',
-        'lr': 0.01,
-        'batch_size': 128,
-        'epoch': 21,
-        'reduce_lr_each': 5,
-        'save_every_epochs': 1,
-        'residual': False,
-        'weight_decay': 0,
-        'dropout': False,
-    },
-    'experiment_18': { #TODO: check performance
-        'architecture_index': 5,
-        'optimizer': 'adam',
-        'dataset': 'cifar10',
-        'lr': 0.001,
-        'batch_size': 256,
-        'epoch': 201,
-        'reduce_lr_each': 40,
-        'save_every_epochs': 50,
-        'residual': False,
-        'weight_decay': 1e-5,
-        'dropout': True,
-    },
-    'experiment_19': { #TODO: this only trains on 40 GBs GPU
-        'architecture_index': 6,
-        'optimizer': 'sgd',
-        'dataset': 'cifar10',
-        'lr': 0.001,
-        'batch_size': 128,
-        'epoch': 301,
-        'reduce_lr_each': 40,
-        'save_every_epochs': 10,
-        'residual': False,
-        'weight_decay': 1e-5,
-        'dropout': True,
-    },
-    'experiment_20': { #TODO: this only trains on 40 GBs GPU
-        'architecture_index': 6,
         'optimizer': 'momentum',
         'dataset': 'mnist',
         'lr': 0.001,
@@ -296,8 +222,8 @@ DEFAULT_EXPERIMENTS = {
         'weight_decay': 1e-5,
         'dropout': True,
     },
-    'experiment_21': { #TODO: this only trains on 40 GBs GPU
-        'architecture_index': 6,
+    'experiment_15': { #TODO: this only trains on 40 GBs GPU
+        'architecture_index': 5,
         'optimizer': 'momentum',
         'dataset': 'fashion',
         'lr': 0.001,
@@ -309,8 +235,8 @@ DEFAULT_EXPERIMENTS = {
         'weight_decay': 1e-5,
         'dropout': True,
     },
-    'experiment_22': { #TODO: this only trains on 40 GBs GPU
-        'architecture_index': 7,
+    'experiment_16': { #TODO: this only trains on 40 GBs GPU
+        'architecture_index': 6,
         'optimizer': 'momentum',
         'dataset': 'mnist',
         'lr': 0.001,
@@ -322,8 +248,8 @@ DEFAULT_EXPERIMENTS = {
         'weight_decay': 0,
         'dropout': False,
     },
-    'experiment_23': { #TODO: this only trains on 40 GBs GPU
-        'architecture_index': 7,
+    'experiment_17': { #TODO: this only trains on 40 GBs GPU
+        'architecture_index': 6,
         'optimizer': 'momentum',
         'dataset': 'fashion',
         'lr': 0.001,

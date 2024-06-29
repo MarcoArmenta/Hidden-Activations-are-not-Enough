@@ -13,7 +13,7 @@ from constants.constants import DEFAULT_EXPERIMENTS
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--default_index", type=int, default=0, help="The index for default experiment")
-    parser.add_argument("--num_samples_per_class", type=int, default=4000,
+    parser.add_argument("--num_samples_per_class", type=int, default=1000,
                         help="Number of data samples per class to compute matrices.")
     parser.add_argument("--nb_workers", type=int, default=8, help="Number of threads for parallel computation")
     return parser.parse_args()

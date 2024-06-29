@@ -12,7 +12,7 @@ from pathlib import Path
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--default_index", type=int, default=17, help="The index for default experiment")
+    parser.add_argument("--default_index", type=int, default=0, help="The index for default experiment")
     parser.add_argument("--architecture_index", type=int, help="The index of the architecture to train.")
     parser.add_argument("--residual", type=int, help="Residual connections in the architecture every 4 layers.")
     parser.add_argument("--dataset", type=str, help="The dataset to train the model on.")
@@ -95,7 +95,7 @@ def main():
     elif optimizer_name == "adam":
         optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     else:
-        raise ValueError("Unsupported optimizer")
+        raise ValueError("Unsupported optimizer. Add it manually at line 97 on training.py")
 
     scheduler = StepLR(optimizer, step_size=reduce_lr_each, gamma=0.1)
 
@@ -128,7 +128,7 @@ def main():
         history['test_loss'].append(test_loss)
 
         print(f"Epoch {epoch}/{epochs}, Train Loss: {train_loss:.4f}, Test Loss: {test_loss:.4f}, "
-              f"Train Accuracy: {train_accuracy:.4f}, Test Accuracy: {test_accuracy:.4f}")
+              f"Train Accuracy: {train_accuracy:.4f}, Test Accuracy: {test_accuracy:.4f}", flush=True)
 
         scheduler.step()
 
