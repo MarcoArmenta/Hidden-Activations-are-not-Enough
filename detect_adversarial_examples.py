@@ -124,13 +124,21 @@ def reject_predicted_attacks(default_index,
 
             results.append(res)
 
+
+
         if verbose:
             print("Attack method: ", a)
             if a == 'test':
                 print(f'Wrongly rejected test data : {rejected_and_not_attacked} out of {len(attacked_dataset[a])}', flush=True)
                 print(f'Trusted test data : {not_rejected_and_not_attacked} out of {len(attacked_dataset[a])}', flush=True)
+
+                if counts['test']['not_rejected_and_not_attacked'] == 0:
+                    test_acc = 0
+                else:
+                    test_acc = test_acc / counts['test']['not_rejected_and_not_attacked']
+
                 print("Accuracy on test data that was not rejected: ",
-                      test_acc / counts['test']['not_rejected_and_not_attacked'])
+                      test_acc)
 
             else:
                 print(f'Detected adversarial examples : {rejected_and_attacked} out of {len(attacked_dataset[a])}', flush=True)
@@ -143,7 +151,7 @@ def reject_predicted_attacks(default_index,
 
     test_accuracy = f'experiments/{default_index}/counts_per_attack/test_accuracy_{std}_{d1}.json'
     with open(test_accuracy, 'w') as json_file:
-        json.dump([test_acc / counts['test']['not_rejected_and_not_attacked']], json_file, indent=4)
+        json.dump([test_acc], json_file, indent=4)
 
     good_defence = 0
     wrongly_rejected = 0

@@ -1,6 +1,7 @@
 import argparse
 import pandas as pd
 import sys
+from pathlib import Path
 
 
 def parse_args(parser=None):
@@ -15,7 +16,6 @@ def parse_args(parser=None):
     parser.add_argument(
         "--default_index",
         type=int,
-        required=True,
         default=0,
         help="The index for default experiment",
     )
@@ -45,8 +45,10 @@ def get_top_10_abs_difference(df, default_index):
 if __name__ == "__main__":
     args = parse_args()
 
+    path_output = Path(f'experiments/{args.default_index}/grid_search/grid_search_{args.default_index}.txt')
+
     # Read the results file into a DataFrame
-    df = pd.read_csv(args.output_file)
+    df = pd.read_csv(path_output)
 
     # Check if the default_index exists
     if not check_default_index_exists(df, args.default_index):

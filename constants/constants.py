@@ -135,7 +135,7 @@ DEFAULT_EXPERIMENTS = {
         'architecture_index': 2,
         'optimizer': 'adam',
         'dataset': 'mnist',
-        'lr': 0.1,
+        'lr': 0.01,
         'batch_size': 128,
         'epoch': 31,
         'reduce_lr_each': 10,
