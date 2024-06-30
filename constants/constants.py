@@ -2,16 +2,16 @@ ARCHITECTURES = [# 0 -> 0, 1, 2, 3
                  (500, 500, 500, 500, 500),
                  # 1 -> 4, 5, 6
                  (1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000),
-                 # 2 -> 7, 8, 9
+                 # 2 -> 7, 8
                  (1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000,
                   1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000),
-                 # 3 -> 10, 11,
+                 # 3 -> 9, 10,
                  (10000, 10000),
-                 # 4 -> 12, 13
+                 # 4 -> 11, 12
                  (10000, 10000, 10000, 10000, 10000),
-                 # 5 -> 14, 15
+                 # 5 -> 13, 14
                  (675000, 1500, 1500, 1500, 1500),
-                 # 6 -> 16, 17
+                 # 6 -> 15, 16
                  (2500000, )
                  ]
 # TODO: the more MLPs the better
@@ -196,7 +196,7 @@ DEFAULT_EXPERIMENTS = {
         'weight_decay': 0,
         'dropout': False,
     },
-    'experiment_14': { #TODO: this only trains on 40 GBs GPU
+    'experiment_13': { #TODO: this only trains on 40 GBs GPU
         'architecture_index': 5,
         'optimizer': 'momentum',
         'dataset': 'mnist',
@@ -209,7 +209,7 @@ DEFAULT_EXPERIMENTS = {
         'weight_decay': 1e-5,
         'dropout': True,
     },
-    'experiment_15': { #TODO: this only trains on 40 GBs GPU
+    'experiment_14': { #TODO: this only trains on 40 GBs GPU
         'architecture_index': 5,
         'optimizer': 'momentum',
         'dataset': 'fashion',
@@ -222,7 +222,7 @@ DEFAULT_EXPERIMENTS = {
         'weight_decay': 1e-5,
         'dropout': True,
     },
-    'experiment_16': { #TODO: this only trains on 40 GBs GPU
+    'experiment_15': { #TODO: this only trains on 40 GBs GPU
         'architecture_index': 6,
         'optimizer': 'momentum',
         'dataset': 'mnist',
@@ -235,7 +235,7 @@ DEFAULT_EXPERIMENTS = {
         'weight_decay': 0,
         'dropout': False,
     },
-    'experiment_17': { #TODO: this only trains on 40 GBs GPU
+    'experiment_16': { #TODO: this only trains on 40 GBs GPU
         'architecture_index': 6,
         'optimizer': 'momentum',
         'dataset': 'fashion',
