@@ -63,7 +63,7 @@ def reject_predicted_attacks(default_index,
         raise ValueError(f"File does not exists: {reject_path}")
 
     if reject_at <= 0:
-        raise ValueError(f"Rejection level is {reject_at}")
+        return
 
     print(f"Will reject when 'zero dims' < {reject_at}.")
     adv_succes = {attack: [] for attack in ["test"]+ATTACKS}  # Save adversarial examples that were not detected

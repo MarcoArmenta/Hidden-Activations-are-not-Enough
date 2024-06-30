@@ -33,7 +33,7 @@ def parse_args(parser=None):
     )
     parser.add_argument(
         "--default_index",
-        required=True,
+        default=0,
         type=int,
         help="The index for default experiment",
     )
@@ -68,17 +68,26 @@ def check_param_combination_exists(output_file, std, d1, d2, index):
 # Function to run the generate_adversarial_examples.py script with given parameters
 def run_adv_examples_script(params):
     std, d1, d2, index, lock, output_file = params
+    print(f'Running parameters: {params}')
 
     if check_param_combination_exists(output_file, std, d1, d2, index):
         print(f"Skipping existing params: std={std}, d1={d1}, d2={d2}, default_index={index}")
         return
-    # TODO: should compute rejection level only once for all d2 possible
+
     cmd = f"source ~/NeuralNets/MatrixStatistics/matrix/bin/activate &&" \
           f" python compute_rejection_level.py --std {std} --d1 {d1} " \
           f"--default_index {index}"
-    subprocess.run(
+    result = subprocess.run(
         cmd, shell=True, capture_output=True, text=True, executable="/bin/bash"
     )
+
+    if result.returncode != 0:
+        raise ValueError(f"Error running compute_rejection_level.py with params {params}: {result.stderr}")
+
+    output_lines = result.stdout.split('\n')
+    for line in output_lines:
+        if "Rejection level" in line:
+            rej_lev = float(line.split()[-1].strip(':'))
 
     cmd = f"source ~/NeuralNets/MatrixStatistics/matrix/bin/activate &&" \
           f" python detect_adversarial_examples.py --std {std} --d1 {d1} --d2 {d2} " \
@@ -88,7 +97,7 @@ def run_adv_examples_script(params):
     )
 
     if result.returncode != 0:
-        raise ValueError(f"Error running script with params {params}: {result.stderr}")
+        raise ValueError(f"Error running detect_adversarial_examples.py with params {params}: {result.stderr}")
 
     # Extract the metrics from the output
     output_lines = result.stdout.split('\n')
@@ -100,10 +109,11 @@ def run_adv_examples_script(params):
         if "Percentage of wrong rejections" in line:
             wrong_rejection = float(line.split()[-1].strip(':'))
 
+
     if good_defences is not None and wrong_rejection is not None:
         result_line = f"{std},{d1},{d2},default {index},{good_defences},{wrong_rejection}\n"
     else:
-        result_line = f"{std},{d1},{d2},default {index},None\n"
+        result_line = f"{std},{d1},{d2},default {index},rej_lev={rej_lev}\n"
 
     print(result_line.strip())
 
@@ -139,6 +149,10 @@ def main():
 
         # Prepare arguments for the workers
         param_grid_with_lock = [(std, d1, d2, index, lock, output_file) for std, d1, d2, index in param_grid]
+
+        #for args in param_grid_with_lock:
+        #    print(f'Running parameters: {args}')
+        #    run_adv_examples_script(args)
 
         # Use multiprocessing Pool to run the scripts in parallel
         with Pool(processes=args.nb_workers) as pool:
