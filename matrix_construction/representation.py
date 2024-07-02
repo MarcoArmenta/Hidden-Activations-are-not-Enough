@@ -6,10 +6,7 @@ from model_zoo.mlp import *
 
 
 class MlpRepresentation:
-    def __init__(
-        self, model: MLP, device="cpu",
-    ):
-        super(MlpRepresentation, self).__init__()
+    def __init__(self, model: MLP, device="cpu") -> None:
         self.device = device
         self.act_fn = model.get_activation_fn()()
         self.mlp_weights = []
@@ -38,17 +35,17 @@ class MlpRepresentation:
                 self.mlp_weights.append(torch.diag(gamma/factor))
                 self.mlp_biases.append(beta - mu*gamma/factor)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         flat_x = torch.flatten(x).to(device=self.device)
         self.model.save = True
-        _ = self.model(flat_x, rep=True)
+        _ = self.model(flat_x)
 
         A = self.mlp_weights[0].to(self.device) * flat_x
 
         a = self.mlp_biases[0]
 
         for i in range(1, len(self.mlp_weights)):
-            layer = self.mlp_weights[i].to(self.device)
+            layeri = self.mlp_weights[i].to(self.device)
 
             pre_act = self.model.pre_acts[i-1]
             post_act = self.model.acts[i-1]
@@ -56,7 +53,7 @@ class MlpRepresentation:
             vertices = post_act / pre_act
             vertices[torch.isnan(vertices) | torch.isinf(vertices)] = 0.0
 
-            B = layer * vertices
+            B = layeri * vertices
             A = torch.matmul(B, A)
 
             if self.model.bias or self.model.batch_norm:
