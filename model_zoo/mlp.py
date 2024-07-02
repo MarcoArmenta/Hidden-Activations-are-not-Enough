@@ -150,3 +150,28 @@ class MLP(nn.Module):
                 m.reset_parameters()
 
         self.apply(init_func)
+
+if __name__ == '__main__':
+    mlp = MLP(input_shape=(1, 28, 28),
+        num_classes=10,
+        hidden_sizes=[10, 20, 30],
+        activation="relu",
+        bias=False,
+        dropout=True,
+        residual=False,
+        save=True,
+        batch_norm=False)
+
+    x = torch.rand((1, 28, 28))
+
+    y = mlp(x, rep=True)
+    print(len(mlp.acts))
+    print(len(mlp.pre_acts))
+
+    from matrix_construction.representation import MlpRepresentation
+
+    rep = MlpRepresentation(mlp)
+    mat = rep.forward(x)
+    ones = torch.ones(784)
+    y_rep = mat.matmul(ones)
+    print(abs(y_rep-y))
