@@ -14,7 +14,7 @@ class MLP(nn.Module):
             hidden_sizes=(10, 10),
             activation="relu",
             bias=False,
-            dropout=False,
+            dropout=-1,
             residual=False,
             save=False,
             batch_norm=False
@@ -50,8 +50,8 @@ class MLP(nn.Module):
                 break
             if batch_norm:
                 self.layers.append(nn.BatchNorm1d(self.layers_size[idx + 1]))
-            if dropout and idx % 2:
-                self.layers.append(nn.Dropout(0.5))
+            if dropout>0 and idx % 2:
+                self.layers.append(nn.Dropout(dropout))
             self.layers.append(self.get_activation_fn()())
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -79,7 +79,7 @@ class MLP(nn.Module):
                     self.pre_acts.append(x.detach().clone())
             elif isinstance(layer, (nn.ReLU, nn.Tanh, nn.ELU, nn.LeakyReLU, nn.PReLU, nn.Sigmoid)):
                 if self.residual:
-                    if cont % 4 == 0:  # Add the saved input after a residual pair
+                    if cont % 2 == 0:  # Add the saved input after a residual pair
                         x += x_res
                         x = layer(x)
                         x_res = x
@@ -129,29 +129,3 @@ class MLP(nn.Module):
                 m.reset_parameters()
 
         self.apply(init_func)
-
-
-if __name__ == '__main__':
-    mlp = MLP(input_shape=(1, 28, 28),
-        num_classes=10,
-        hidden_sizes=[10, 20, 30],
-        activation="relu",
-        bias=False,
-        dropout=True,
-        residual=False,
-        save=True,
-        batch_norm=False)
-
-    x = torch.rand((1, 28, 28))
-
-    y = mlp(x)
-    print(len(mlp.acts))
-    print(len(mlp.pre_acts))
-
-    from matrix_construction.representation import MlpRepresentation
-
-    rep = MlpRepresentation(mlp)
-    mat = rep.forward(x)
-    ones = torch.ones(784)
-    y_rep = mat.matmul(ones)
-    print(abs(y_rep-y))

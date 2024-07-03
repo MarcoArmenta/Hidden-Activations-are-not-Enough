@@ -38,7 +38,7 @@ DEFAULT_EXPERIMENTS = {
         'save_every_epochs': 2,
         'residual': False,
         'weight_decay': 0,
-        'dropout': False,
+        'dropout': 0,
     },
     'experiment_1': {
         'architecture_index': 0,
@@ -51,7 +51,7 @@ DEFAULT_EXPERIMENTS = {
         'save_every_epochs': 2,
         'residual': False,
         'weight_decay': 0,
-        'dropout': False,
+        'dropout': 0,
     },
     'experiment_2': {
         'architecture_index': 0,
@@ -64,7 +64,7 @@ DEFAULT_EXPERIMENTS = {
         'save_every_epochs': 10,
         'residual': False,
         'weight_decay': 0,
-        'dropout': False,
+        'dropout': 0,
     },
     'experiment_3': {
         'architecture_index': 0,
@@ -77,7 +77,7 @@ DEFAULT_EXPERIMENTS = {
         'save_every_epochs': 10,
         'residual': False,
         'weight_decay': 0,
-        'dropout': False,
+        'dropout': 0,
     },
     'experiment_4': {
         'architecture_index': 1,
@@ -90,7 +90,7 @@ DEFAULT_EXPERIMENTS = {
         'save_every_epochs': 2,
         'residual': True,
         'weight_decay': 0,
-        'dropout': False,
+        'dropout': 0,
     },
     'experiment_5': {
         'architecture_index': 1,
@@ -103,7 +103,7 @@ DEFAULT_EXPERIMENTS = {
         'save_every_epochs': 5,
         'residual': True,
         'weight_decay': 0,
-        'dropout': False,
+        'dropout': 0,
     },
     'experiment_6': {
         'architecture_index': 1,
@@ -116,7 +116,7 @@ DEFAULT_EXPERIMENTS = {
         'save_every_epochs': 2,
         'residual': True,
         'weight_decay': 0,
-        'dropout': False,
+        'dropout': 0,
     },
     'experiment_7': {
         'architecture_index': 2,
@@ -124,25 +124,25 @@ DEFAULT_EXPERIMENTS = {
         'dataset': 'fashion',
         'lr': 0.0001,
         'batch_size': 16,
-        'epoch': 41, # 11
+        'epoch': 11,
         'reduce_lr_each': 5,
         'save_every_epochs': 5,
         'residual': True,
         'weight_decay': 0,
-        'dropout': False,
+        'dropout': 0,
     },
-    'experiment_8': { # TODO: does not learn
+    'experiment_8': {
         'architecture_index': 2,
         'optimizer': 'adam',
         'dataset': 'mnist',
-        'lr': 0.01,
-        'batch_size': 128,
-        'epoch': 31,
-        'reduce_lr_each': 10,
+        'lr': 0.00026094748208914696,
+        'batch_size': 1681,
+        'epoch': 11,
+        'reduce_lr_each': 20,
         'save_every_epochs': 5,
         'residual': True,
-        'weight_decay': 0.001,
-        'dropout': True,
+        'weight_decay': 0,
+        'dropout': 0.19057126857365506,
     },
     'experiment_9': {
         'architecture_index': 3,
@@ -155,7 +155,7 @@ DEFAULT_EXPERIMENTS = {
         'save_every_epochs': 1,
         'residual': False,
         'weight_decay': 0,
-        'dropout': False,
+        'dropout': 0,
     },
     'experiment_10': {
         'architecture_index': 3,
@@ -168,7 +168,7 @@ DEFAULT_EXPERIMENTS = {
         'save_every_epochs': 1,
         'residual': False,
         'weight_decay': 0,
-        'dropout': False,
+        'dropout': 0,
     },
     'experiment_11': {
         'architecture_index': 4,
@@ -181,7 +181,7 @@ DEFAULT_EXPERIMENTS = {
         'save_every_epochs': 1,
         'residual': False,
         'weight_decay': 0,
-        'dropout': False,
+        'dropout': 0,
     },
     'experiment_12': {
         'architecture_index': 4,
@@ -194,7 +194,7 @@ DEFAULT_EXPERIMENTS = {
         'save_every_epochs': 5,
         'residual': False,
         'weight_decay': 0,
-        'dropout': False,
+        'dropout': 0,
     },
     'experiment_13': { #TODO: this only trains on 40 GBs GPU
         'architecture_index': 5,
@@ -207,7 +207,7 @@ DEFAULT_EXPERIMENTS = {
         'save_every_epochs': 1,
         'residual': False,
         'weight_decay': 1e-5,
-        'dropout': True,
+        'dropout': 0.5,
     },
     'experiment_14': { #TODO: this only trains on 40 GBs GPU
         'architecture_index': 5,
@@ -220,7 +220,7 @@ DEFAULT_EXPERIMENTS = {
         'save_every_epochs': 1,
         'residual': False,
         'weight_decay': 1e-5,
-        'dropout': True,
+        'dropout': 0.5,
     },
     'experiment_15': { #TODO: this only trains on 40 GBs GPU
         'architecture_index': 6,
@@ -233,7 +233,7 @@ DEFAULT_EXPERIMENTS = {
         'save_every_epochs': 1,
         'residual': False,
         'weight_decay': 0,
-        'dropout': False,
+        'dropout': 0,
     },
     'experiment_16': { #TODO: this only trains on 40 GBs GPU
         'architecture_index': 6,
@@ -246,6 +246,6 @@ DEFAULT_EXPERIMENTS = {
         'save_every_epochs': 1,
         'residual': False,
         'weight_decay': 0,
-        'dropout': False,
+        'dropout': 0,
     }
 }
