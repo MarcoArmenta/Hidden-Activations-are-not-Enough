@@ -1,4 +1,4 @@
-from utils.utils import get_model, subset, get_dataset
+from utils.utils import get_model, subset, get_dataset, zip_and_cleanup
 from constants.constants import DEFAULT_EXPERIMENTS
 from matrix_construction.representation import MlpRepresentation
 from pathlib import Path
@@ -29,30 +29,33 @@ def parse_args(parser=None):
         default=8,
         help="How many processes in parallel for adversarial examples computations.",
     )
-
+    parser.add_argument("--temp_dir", type=str)
     return parser.parse_args()
 
 
 def compute_one_matrix(args):
-    im, label, weights_path, architecture_index, residual, input_shape, default_index, dropout, i = args
-    path_experiment_matrix = Path(f'experiments/{default_index}/rejection_levels/matrices/{i}/matrix.pth')
-    path_prediction = Path(f'experiments/{default_index}/rejection_levels/matrices/{i}/prediction.pth')
-    Path(f'experiments/{default_index}/rejection_levels/matrices/{i}/').mkdir(parents=True, exist_ok=True)
+    im, label, weights_path, architecture_index, residual, input_shape, default_index, dropout, i, temp_dir = args
+    #path_experiment_matrix = Path(f'experiments/{default_index}/rejection_levels/matrices/{i}/matrix.pth')
+    #path_prediction = Path(f'experiments/{default_index}/rejection_levels/matrices/{i}/prediction.pth')
+    #Path(f'experiments/{default_index}/rejection_levels/matrices/{i}/').mkdir(parents=True, exist_ok=True)
 
     model = get_model(weights_path, architecture_index, residual, input_shape, dropout)
     representation = MlpRepresentation(model)
     pred = torch.argmax(model.forward(im))
-
+    path_experiment_matrix = Path(f'experiments/{default_index}/rejection_levels/matrices/{i}/matrix.pth')
     # if it is not correctly classified, do not use it for rejection level
     if pred != label:
         return
 
     if os.path.exists(path_experiment_matrix):
         return
-    else:
-        mat = representation.forward(im)
-        torch.save(pred, path_prediction)
-        torch.save(mat, path_experiment_matrix)
+    #else:
+    mat = representation.forward(im)
+    #path_experiment_matrix = Path(f'{temp_dir}/experiments/{default_index}/rejection_levels/matrices/{i}/matrix.pth')
+    path_prediction = Path(f'experiments/{default_index}/rejection_levels/matrices/{i}/prediction.pth')
+    Path(f'experiments/{default_index}/rejection_levels/matrices/{i}/').mkdir(parents=True, exist_ok=True)
+    torch.save(pred, path_prediction)
+    torch.save(mat, path_experiment_matrix)
 
 
 def compute_matrices_for_rejection_level(exp_dataset_train: torch.Tensor,
@@ -63,7 +66,7 @@ def compute_matrices_for_rejection_level(exp_dataset_train: torch.Tensor,
                                          residual,
                                          input_shape,
                                          dropout,
-                                         nb_workers: int = 8) -> None:
+                                         nb_workers: int = 8, temp_dir=None) -> None:
 
     Path(f'experiments/{default_index}/rejection_levels/').mkdir(parents=True, exist_ok=True)
 
@@ -78,8 +81,9 @@ def compute_matrices_for_rejection_level(exp_dataset_train: torch.Tensor,
                  input_shape,
                  default_index,
                  dropout,
-                 i) for i in range(len(exp_dataset_train))]
+                 i, temp_dir) for i in range(len(exp_dataset_train))]
         pool.map(compute_one_matrix, args)
+
 
 
 def main():
@@ -101,15 +105,15 @@ def main():
     else:
         raise ValueError("Default index not specified in constants/constants.py")
 
-    print("Experiment: ", args.default_index)
+    print("Computeing matrices for rejection level for Experiment: ", args.default_index,flush=True)
 
-    weights_path = Path(f'experiments/{args.default_index}/weights') / f'epoch_{epoch}.pth'
+    weights_path = Path(f'{args.temp_dir}/experiments/{args.default_index}/weights') / f'epoch_{epoch}.pth'
     if not weights_path.exists():
         raise ValueError(f"Experiment needs to be trained")
 
-    matrices_path = Path(f'experiments/{args.default_index}/matrices/matrix_statistics.json')
-    if not matrices_path.exists():
-        raise ValueError(f"Matrix statistics have to be computed")
+    #matrices_path = Path(f'{args.temp_dir}/experiments/{args.default_index}/matrices/matrix_statistics.json')
+    #if not matrices_path.exists():
+    #    raise ValueError(f"Matrix statistics have to be computed")
 
     input_shape = (3, 32, 32) if dataset == 'cifar10' else (1, 28, 28)
     train_set, test_set = get_dataset(dataset, data_loader=False)
@@ -128,6 +132,7 @@ def main():
                                         dropout,
                                         args.nb_workers)
 
+    zip_and_cleanup(f'experiments/{args.default_index}/rejection_levels/matrices/', f'experiments/{args.default_index}/rejection_levels/matrices', clean=True)
 
 if __name__ == '__main__':
     main()

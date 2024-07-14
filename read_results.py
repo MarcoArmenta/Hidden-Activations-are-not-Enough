@@ -2,7 +2,7 @@ import argparse
 import pandas as pd
 import sys
 from pathlib import Path
-
+import subprocess
 
 def parse_args(parser=None):
     if parser is None:
@@ -42,6 +42,21 @@ def get_top_10_abs_difference(df, default_index):
     return top_10[['std', 'd1', 'd2', 'good_defence', 'wrong_rejection']]
 
 
+def run_detect_adversarial_examples(std, d1, d2, default_index):
+    cmd = f"source ~/NeuralNets/MatrixStatistics/matrix/bin/activate &&" \
+          f" python detect_adversarial_examples.py --std {std} --d1 {d1} --d2 {d2} " \
+          f"--default_index {default_index}"
+
+    # Run the command and capture the output
+    result = subprocess.run(
+        cmd, shell=True, capture_output=True, text=True, executable="/bin/bash"
+    )
+
+    if result.returncode != 0:
+        print(f"Error running script with params --std {std} --d1 {d1} --d2 {d2}: {result.stderr}")
+    else:
+        print(f"Successfully ran script with params --std {std} --d1 {d1} --d2 {d2}: {result.stdout}")
+
 if __name__ == "__main__":
     args = parse_args()
 
@@ -59,3 +74,7 @@ if __name__ == "__main__":
     top_10_abs_diff = get_top_10_abs_difference(df, args.default_index)
     print("Top 10 values for highest absolute difference:")
     print(top_10_abs_diff)
+
+    for _, row in top_10_abs_diff.iterrows():
+        run_detect_adversarial_examples(row['std'], row['d1'], row['d2'], args.default_index)
+

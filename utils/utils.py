@@ -3,6 +3,7 @@ import torch
 import json
 import torchvision
 from torchvision import transforms
+import shutil
 
 from model_zoo.mlp import MLP
 from constants.constants import ARCHITECTURES
@@ -109,8 +110,11 @@ def compute_statistics(matrix_paths):
     return statistics
 
 
-def compute_train_statistics(default_index=0):
-    original_matrices_path = f'experiments/{default_index}/matrices/'
+def compute_train_statistics(default_index=0, path=None):
+    if path is not None:
+        original_matrices_path = f'{path}/experiments/{default_index}/matrices/'
+    else:
+        original_matrices_path = f'experiments/{default_index}/matrices/'
     original_matrices_paths = find_matrices(original_matrices_path)
 
     statistics = compute_statistics(original_matrices_paths)
@@ -123,7 +127,7 @@ def compute_train_statistics(default_index=0):
             else:  # Otherwise, convert to a list
                 stats[key] = tensor.tolist()
 
-    with open(original_matrices_path + 'matrix_statistics.json', 'w') as json_file:
+    with open(f'experiments/{default_index}/matrices/matrix_statistics.json', 'w') as json_file:
         json.dump(statistics, json_file, indent=4)
 
 
@@ -170,3 +174,17 @@ def subset(train_set, length: int, input_shape=(1, 28, 28)):
         exp_dataset[i] = train_set[j][0]
         exp_labels[i] = train_set.targets[j]
     return exp_dataset, exp_labels
+
+def zip_and_cleanup(src_directory, zip_filename, clean=True):
+    # Create a zip archive
+    print("Zipping", flush=True)
+    shutil.make_archive(zip_filename, 'zip', src_directory)
+
+    # Walk the directory tree and remove files and subdirectories
+    if clean:
+        print("Cleaning", flush=True)
+        for root, dirs, files in os.walk(src_directory, topdown=False):
+            for name in files:
+                os.remove(os.path.join(root, name))
+            for name in dirs:
+                os.rmdir(os.path.join(root, name))

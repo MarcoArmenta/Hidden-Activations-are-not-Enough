@@ -58,6 +58,7 @@ def evaluate_model(model, data_loader, criterion, device):
 
 
 def main():
+    print("Start main")
     args = parse_args()
     if args.default_index is not None:
         try:

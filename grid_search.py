@@ -14,7 +14,7 @@ def parse_args(parser=None):
         "--std_values",
         type=float,
         nargs='+',
-        default=[0.75, 1, 1.5, 2],
+        default=[0.75, 1, 1.5],
         help="The values of std to sweep",
     )
     parser.add_argument(
@@ -43,6 +43,7 @@ def parse_args(parser=None):
         default=8,
         help="Number of threads for parallel computation",
     )
+    parser.add_argument("--temp_dir", type=str, default=None)
 
     return parser.parse_args()
 
@@ -67,37 +68,50 @@ def check_param_combination_exists(output_file, std, d1, d2, index):
 
 # Function to run the generate_adversarial_examples.py script with given parameters
 def run_adv_examples_script(params):
-    std, d1, d2, index, lock, output_file = params
-    print(f'Running parameters: {params}')
+    std, d1, d2, index, lock, output_file, temp_dir = params
+    print(f'Running parameters: {params}', flush=True)
 
     if check_param_combination_exists(output_file, std, d1, d2, index):
         print(f"Skipping existing params: std={std}, d1={d1}, d2={d2}, default_index={index}")
         return
 
-    cmd = f"source ~/NeuralNets/MatrixStatistics/matrix/bin/activate &&" \
-          f" python compute_rejection_level.py --std {std} --d1 {d1} " \
-          f"--default_index {index}"
+    if temp_dir is None:
+        cmd = f"source ~/NeuralNets/MatrixStatistics/matrix/bin/activate &&" \
+              f" python compute_rejection_level.py --std {std} --d1 {d1} " \
+              f"--default_index {index}"
+    else:
+        cmd = f"source ENV/bin/activate &&" \
+              f" python compute_rejection_level.py --std {std} --d1 {d1} " \
+              f"--default_index {index} --temp_dir {temp_dir}"
     result = subprocess.run(
         cmd, shell=True, capture_output=True, text=True, executable="/bin/bash"
     )
 
     if result.returncode != 0:
-        raise ValueError(f"Error running compute_rejection_level.py with params {params}: {result.stderr}")
+        print(f"Error running compute_rejection_level.py with params {params}: {result.stderr}",flush=True)
+        return
 
     output_lines = result.stdout.split('\n')
     for line in output_lines:
         if "Rejection level" in line:
             rej_lev = float(line.split()[-1].strip(':'))
 
-    cmd = f"source ~/NeuralNets/MatrixStatistics/matrix/bin/activate &&" \
-          f" python detect_adversarial_examples.py --std {std} --d1 {d1} --d2 {d2} " \
-          f"--default_index {index}"
+    if temp_dir is None:
+        cmd = f"source ~/NeuralNets/MatrixStatistics/matrix/bin/activate &&" \
+              f" python detect_adversarial_examples.py --std {std} --d1 {d1} --d2 {d2} " \
+              f"--default_index {index} --temp_dir {temp_dir}"
+    else:
+        cmd = f"source ENV/bin/activate &&" \
+              f" python detect_adversarial_examples.py --std {std} --d1 {d1} --d2 {d2} " \
+              f"--default_index {index} --temp_dir {temp_dir}"
+
     result = subprocess.run(
         cmd, shell=True, capture_output=True, text=True, executable="/bin/bash"
     )
 
     if result.returncode != 0:
-        raise ValueError(f"Error running detect_adversarial_examples.py with params {params}: {result.stderr}")
+        print(f"Error running detect_adversarial_examples.py with params {params}: {result.stderr}", flush=True)
+        return
 
     # Extract the metrics from the output
     output_lines = result.stdout.split('\n')
@@ -108,7 +122,6 @@ def run_adv_examples_script(params):
             good_defences = float(line.split()[-1].strip(':'))
         if "Percentage of wrong rejections" in line:
             wrong_rejection = float(line.split()[-1].strip(':'))
-
 
     if good_defences is not None and wrong_rejection is not None:
         result_line = f"{std},{d1},{d2},default {index},{good_defences},{wrong_rejection}\n"
@@ -124,6 +137,7 @@ def run_adv_examples_script(params):
 
 
 def main():
+    print("Grid search starting...",flush=True)
     args = parse_args()
 
     experiment_path = Path(f'experiments/{args.default_index}/grid_search/')
@@ -148,7 +162,7 @@ def main():
                 f.write("std,d1,d2,default_index,good_defence,wrong_rejection\n")
 
         # Prepare arguments for the workers
-        param_grid_with_lock = [(std, d1, d2, index, lock, output_file) for std, d1, d2, index in param_grid]
+        param_grid_with_lock = [(std, d1, d2, index, lock, output_file, args.temp_dir) for std, d1, d2, index in param_grid]
 
         #for args in param_grid_with_lock:
         #    print(f'Running parameters: {args}')

@@ -9,6 +9,7 @@ from pathlib import Path
 from matrix_construction.representation import MlpRepresentation
 from utils.utils import get_model, get_dataset
 from constants.constants import DEFAULT_EXPERIMENTS, ATTACKS
+from utils.utils import zip_and_cleanup
 
 
 def parse_args(parser=None):
@@ -26,22 +27,23 @@ def parse_args(parser=None):
         default=8,
         help="How many processes in parallel for adversarial examples computations and their matrices.",
     )
+    parser.add_argument("--temp_dir", type=str)
 
     return parser.parse_args()
 
 
-def save_one_matrix(im, attack, i, path_adv_matrices, weights_path, architecture_index, residual, input_shape, dropout):
+def save_one_matrix(im, attack, i, default_index, weights_path, architecture_index, residual, input_shape, dropout, temp_dir):
     model = get_model(weights_path, architecture_index, residual, input_shape, dropout)
     representation = MlpRepresentation(model)
-    matrix_save_path = path_adv_matrices / f'{attack}' / f'{i}/matrix.pth'
+    matrix_save_path = Path(f'{temp_dir}/experiments/{default_index}/adversarial_matrices') / f'{attack}' / f'{i}/matrix.pth'
     matrix_save_path.parent.mkdir(parents=True, exist_ok=True)
     if not matrix_save_path.exists():
         mat = representation.forward(im)
         torch.save(mat, matrix_save_path)
 
 
-def generate_matrices_for_attacks(path_adv_matrices,
-                                  experiment_dir,
+def generate_matrices_for_attacks(default_index,
+                                  temp_dir,
                                   weights_path,
                                   architecture_index,
                                   residual,
@@ -49,7 +51,10 @@ def generate_matrices_for_attacks(path_adv_matrices,
                                   dropout,
                                   nb_workers):
     for attack in ['test'] + ATTACKS:
-        path_adv_examples = experiment_dir / f"{attack}/adversarial_examples.pth"
+        path_adv_examples = Path(temp_dir) / f'experiments/{default_index}/adversarial_examples' / f"{attack}/adversarial_examples.pth"
+        if not path_adv_examples.exists():
+            print(f'Attak {attack} does NOT exists.', flush=True)
+            continue
         attacked_dataset = torch.load(path_adv_examples)
 
         print(f"Generating matrices for attack {attack}.", flush=True)
@@ -57,12 +62,12 @@ def generate_matrices_for_attacks(path_adv_matrices,
         arguments = [(attacked_dataset[i],
                       attack,
                       i,
-                      path_adv_matrices,
+                      default_index,
                       weights_path,
                       architecture_index,
                       residual,
                       input_shape,
-                      dropout)
+                      dropout, temp_dir)
                      for i in range(len(attacked_dataset))]
 
         with Pool(processes=nb_workers) as pool:
@@ -90,23 +95,24 @@ def main():
     else:
         raise ValueError("Default index not specified in constants/constants.py")
 
-    print("Experiment: ", args.default_index)
+    print("Experiment: ", args.default_index, flush=True)
 
-    weights_path = Path(f'experiments/{args.default_index}/weights') / f'epoch_{epoch}.pth'
+    #weights_path = Path(f'experiments/{args.default_index}/weights') / f'epoch_{epoch}.pth'
+    weights_path = Path(f'{args.temp_dir}/experiments/{args.default_index}/weights/epoch_{epoch}.pth')
     if not weights_path.exists():
         raise ValueError(f"Experiment needs to be trained")
 
     input_shape = (3, 32, 32) if dataset == 'cifar10' else (1, 28, 28)
-    _, test_set = get_dataset(dataset, data_loader=False)
+    #_, test_set = get_dataset(dataset, data_loader=False, data_path=f'{args.temp_dir}/data/')
 
-    experiment_dir = Path(f'experiments/{args.default_index}/adversarial_examples')
-    experiment_dir.mkdir(parents=True, exist_ok=True)
+    #experiment_dir = Path(f'{args.temp_dir}/experiments/{args.default_index}/adversarial_examples')
+    #experiment_dir.mkdir(parents=True, exist_ok=True)
 
-    path_adv_matrices = Path(f'experiments/{args.default_index}/adversarial_matrices/')
-    path_adv_matrices.mkdir(parents=True, exist_ok=True)
+    #path_adv_matrices = Path(f'experiments/{args.default_index}/adversarial_matrices/')
+    #path_adv_matrices.mkdir(parents=True, exist_ok=True)
 
-    generate_matrices_for_attacks(path_adv_matrices,
-                                  experiment_dir,
+    generate_matrices_for_attacks(args.default_index,
+                                  args.temp_dir,
                                   weights_path,
                                   architecture_index,
                                   residual,
@@ -114,6 +120,8 @@ def main():
                                   dropout,
                                   args.nb_workers)
 
+    zip_and_cleanup(f'{args.temp_dir}/experiments/{args.default_index}/adversarial_matrices/',
+                    f'experiments/{args.default_index}/adversarial_matrices', clean=False)
 
 if __name__ == "__main__":
     main()

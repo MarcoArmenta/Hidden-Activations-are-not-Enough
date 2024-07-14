@@ -16,6 +16,7 @@ def parse_args():
     parser.add_argument("--num_samples_per_class", type=int, default=1000,
                         help="Number of data samples per class to compute matrices.")
     parser.add_argument("--nb_workers", type=int, default=8, help="Number of threads for parallel computation")
+    parser.add_argument("--weights_path", type=str, help="path to weights")
     return parser.parse_args()
 
 
@@ -46,7 +47,8 @@ def main():
 
     chunk_size = num_samples // args.nb_workers
 
-    weights_path = f'experiments/{args.default_index}/weights/'
+    #weights_path = f'experiments/{args.default_index}/weights/'
+    weights_path = f'{args.weights_path}/experiments/{args.default_index}/weights/'
     if not os.path.exists(weights_path):
         ValueError(f"Model needs to be trained first")
 
@@ -70,9 +72,9 @@ def main():
     print(f"Computing matrices...", flush=True)
     with Pool(processes=args.nb_workers) as pool:
         pool.starmap(compute_matrices, arguments)
-
-    print('Computing matrix statistics', flush=True)
-    compute_train_statistics(args.default_index)
+    print("Done!",flush=True)
+    #print('Computing matrix statistics', flush=True)
+    #compute_train_statistics(args.default_index)
 
 
 if __name__ == '__main__':

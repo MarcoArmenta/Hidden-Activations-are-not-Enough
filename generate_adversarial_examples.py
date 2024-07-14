@@ -34,7 +34,8 @@ def parse_args(parser=None):
         default=8,
         help="How many processes in parallel for adversarial examples computations and their matrices.",
     )
-
+    parser.add_argument("--weights_path", type=str, help="path to weights")
+    parser.add_argument("--data_path", type=str, help="path to dataset")
     return parser.parse_args()
 
 
@@ -45,8 +46,6 @@ def apply_attack(attack_name, data, labels, weights_path, architecture_index, pa
         print(f"Loading attack {attack_name}")
         misclassified_images = torch.load(attack_save_path)
         return attack_name, misclassified_images
-
-    attack_save_path.parent.mkdir(parents=True, exist_ok=True)
 
     print(f"Attacking with {attack_name}", flush=True)
     model = get_model(weights_path, architecture_index, residual, input_shape, dropout)
@@ -78,8 +77,12 @@ def apply_attack(attack_name, data, labels, weights_path, architecture_index, pa
                                 torchattacks.Pixle(model),
                                 torchattacks.FAB(model),
                                 ]))
+    try:
+        attacked_data = attacks_classes[attack_name](data, labels)
+    except:
+        return None, None
 
-    attacked_data = attacks_classes[attack_name](data, labels)
+    attack_save_path.parent.mkdir(parents=True, exist_ok=True)
 
     if attack_name == "test":
         torch.save(attacked_data, attack_save_path)
@@ -141,7 +144,7 @@ def generate_adversarial_examples(exp_dataset_test: torch.Tensor,
         torch.save(attacked_dataset, path_adv_examples)
 
     number_of_attacks_path = experiment_dir / 'number_examples_per_attack.json'
-    nb_attacks = {a: len(attacked_dataset[a]) for a in attacked_dataset.keys()}
+    nb_attacks = {a: len(attacked_dataset[a]) if attacked_dataset[a] is not None else 0 for a in attacked_dataset.keys()}
     with number_of_attacks_path.open('w') as json_file:
         json.dump(nb_attacks, json_file, indent=4)
 
@@ -169,12 +172,13 @@ def main():
 
     print("Experiment: ", args.default_index)
 
-    weights_path = Path(f'experiments/{args.default_index}/weights') / f'epoch_{epoch}.pth'
+    #weights_path = Path(f'experiments/{args.default_index}/weights') / f'epoch_{epoch}.pth'
+    weights_path = Path(f'{args.weights_path}/experiments/{args.default_index}/weights/epoch_{epoch}.pth')
     if not weights_path.exists():
         raise ValueError(f"Experiment needs to be trained")
 
     input_shape = (3, 32, 32) if dataset == 'cifar10' else (1, 28, 28)
-    _, test_set = get_dataset(dataset, data_loader=False)
+    _, test_set = get_dataset(dataset, data_loader=False, data_path=args.data_path)
     test_size = len(test_set) if args.test_size == -1 else args.test_size
     exp_dataset_test, exp_labels_test = subset(test_set, test_size, input_shape=input_shape)
 
