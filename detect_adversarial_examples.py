@@ -86,7 +86,10 @@ def reject_predicted_attacks(default_index,
         not_rejected_and_not_attacked = 0
         rejected_and_attacked = 0
         rejected_and_not_attacked = 0
-
+        try:
+            Num = len(attacked_dataset[a])
+        except:
+            continue
         for i in range(len(attacked_dataset[a])):
             current_matrix_path = path_adv_matrices + f"/{a}/{i}/matrix.pth"
             im = attacked_dataset[a][i]
@@ -143,8 +146,10 @@ def reject_predicted_attacks(default_index,
                       test_acc, flush=True)
 
             else:
-                print(f'Detected adversarial examples : {rejected_and_attacked} out of {len(attacked_dataset[a])}', flush=True)
-                print(f'Successful adversarial examples : {not_rejected_and_attacked} out of {len(attacked_dataset[a])}', flush=True)
+                print(f'Detected adversarial examples : {rejected_and_attacked} out of {len(attacked_dataset[a]) if a in attacked_dataset else 0}', flush=True)
+                print(f'Successful adversarial examples : {not_rejected_and_attacked} out of {len(attacked_dataset[a]) if a in attacked_dataset else 0}', flush=True)
+                #print(f'Detected adversarial examples : {rejected_and_attacked} out of {len(attacked_dataset[a])}', flush=True)
+                #print(f'Successful adversarial examples : {not_rejected_and_attacked} out of {len(attacked_dataset[a])}', flush=True)
 
     counts_file = f'experiments/{default_index}/counts_per_attack/counts_per_attack_{std}_{d1}_{d2}.json'
     Path(f'experiments/{default_index}/counts_per_attack/').mkdir(parents=True, exist_ok=True)
@@ -168,7 +173,8 @@ def reject_predicted_attacks(default_index,
     print(f"Percentage of wrong rejections: {wrongly_rejected/(len(results)-num_att)}", flush=True)
 
     counts_tensor = torch.tensor([counts[key]['not_rejected_and_attacked'] for key in ATTACKS], dtype=torch.float)
-    num_attacked_samples = torch.tensor([len(attacked_dataset[key]) for key in ATTACKS], dtype=torch.float)
+    #num_attacked_samples = torch.tensor([len(attacked_dataset[key]) for key in ATTACKS], dtype=torch.float)
+    num_attacked_samples = torch.tensor([len(attacked_dataset[key]) if key in attacked_dataset else 0 for key in ATTACKS], dtype=torch.float)
     normalized_counts = counts_tensor / num_attacked_samples
     probabilities = {key: normalized_counts[i].item() for i, key in enumerate(ATTACKS)}
 

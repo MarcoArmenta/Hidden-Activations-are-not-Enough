@@ -42,7 +42,7 @@ def compute_one_matrix(args):
     model = get_model(weights_path, architecture_index, residual, input_shape, dropout)
     representation = MlpRepresentation(model)
     pred = torch.argmax(model.forward(im))
-    path_experiment_matrix = Path(f'experiments/{default_index}/rejection_levels/matrices/{i}/matrix.pth')
+    path_experiment_matrix = Path(f'{temp_dir}/experiments/{default_index}/rejection_levels/matrices/{i}/matrix.pth')
     # if it is not correctly classified, do not use it for rejection level
     if pred != label:
         return
@@ -52,8 +52,8 @@ def compute_one_matrix(args):
     #else:
     mat = representation.forward(im)
     #path_experiment_matrix = Path(f'{temp_dir}/experiments/{default_index}/rejection_levels/matrices/{i}/matrix.pth')
-    path_prediction = Path(f'experiments/{default_index}/rejection_levels/matrices/{i}/prediction.pth')
-    Path(f'experiments/{default_index}/rejection_levels/matrices/{i}/').mkdir(parents=True, exist_ok=True)
+    path_prediction = Path(f'{temp_dir}/experiments/{default_index}/rejection_levels/matrices/{i}/prediction.pth')
+    Path(f'{temp_dir}/experiments/{default_index}/rejection_levels/matrices/{i}/').mkdir(parents=True, exist_ok=True)
     torch.save(pred, path_prediction)
     torch.save(mat, path_experiment_matrix)
 
@@ -105,7 +105,7 @@ def main():
     else:
         raise ValueError("Default index not specified in constants/constants.py")
 
-    print("Computeing matrices for rejection level for Experiment: ", args.default_index,flush=True)
+    print("Computing matrices for rejection level for Experiment: ", args.default_index,flush=True)
 
     weights_path = Path(f'{args.temp_dir}/experiments/{args.default_index}/weights') / f'epoch_{epoch}.pth'
     if not weights_path.exists():
@@ -130,9 +130,9 @@ def main():
                                         residual,
                                         input_shape,
                                         dropout,
-                                        args.nb_workers)
+                                        args.nb_workers, args.temp_dir)
 
-    zip_and_cleanup(f'experiments/{args.default_index}/rejection_levels/matrices/', f'experiments/{args.default_index}/rejection_levels/matrices', clean=True)
+    zip_and_cleanup(f'{args.temp_dir}/experiments/{args.default_index}/rejection_levels/matrices/', f'experiments/{args.default_index}/rejection_levels/matrices/matrices', clean=False)
 
 if __name__ == '__main__':
     main()

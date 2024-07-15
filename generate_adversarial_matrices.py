@@ -121,7 +121,7 @@ def main():
                                   args.nb_workers)
 
     zip_and_cleanup(f'{args.temp_dir}/experiments/{args.default_index}/adversarial_matrices/',
-                    f'experiments/{args.default_index}/adversarial_matrices', clean=False)
+                    f'experiments/{args.default_index}/adversarial_matrices/adversarial_matrices', clean=False)
 
 if __name__ == "__main__":
     main()

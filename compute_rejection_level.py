@@ -46,8 +46,8 @@ def process_sample(ellipsoids, d1, default_index, i, temp_dir):
         return c
     else:
         #raise ValueError(f'{temp_dir}/experiments/{default_index}/rejection_levels/matrices/{i}/matrix.pth')
-        print(f"Empty matrix at process sample", flush=True)
-        print(f'{temp_dir}/experiments/{default_index}/rejection_levels/matrices/{i}/matrix.pth', flush=True)
+        #print(f"Empty matrix at process sample", flush=True)
+        #print(f'{temp_dir}/experiments/{default_index}/rejection_levels/matrices/{i}/matrix.pth', flush=True)
         return None
 
 
