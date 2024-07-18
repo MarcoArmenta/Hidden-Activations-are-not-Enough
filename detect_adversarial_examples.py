@@ -65,6 +65,7 @@ def reject_predicted_attacks(default_index,
         #raise ValueError(f"File does not exists: {reject_path}")
         return
     if reject_at <= 0:
+        print(f"Rejection level too small: {reject_at}",flush=True)
         return
 
     print(f"Will reject when 'zero dims' < {reject_at}.",flush=True)
@@ -91,7 +92,7 @@ def reject_predicted_attacks(default_index,
         except:
             continue
         for i in range(len(attacked_dataset[a])):
-            current_matrix_path = path_adv_matrices + f"/{a}/{i}/matrix.pth"
+            current_matrix_path = path_adv_matrices + f"{a}/{i}/matrix.pth"
             im = attacked_dataset[a][i]
             pred = torch.argmax(model.forward(im))
             mat = torch.load(current_matrix_path)

@@ -14,21 +14,21 @@ def parse_args(parser=None):
         "--std_values",
         type=float,
         nargs='+',
-        default=[0.75, 1, 1.5],
+        default=[0.1, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2],
         help="The values of std to sweep",
     )
     parser.add_argument(
         "--d1_values",
         type=float,
         nargs='+',
-        default=[0.01, 0.1, 0.3, 0.5, 0.8, 1],
+        default=[0.001, 0.01, 0.05, 0.1, 0.3, 0.5, 0.75, 0.8, 1, 1.25, 1.5, 1.75],
         help="The values of d1 to sweep",
     )
     parser.add_argument(
         "--d2_values",
         type=float,
         nargs='+',
-        default=[0.01, 0.1, 0.3, 0.5, 0.8, 1],
+        default=[0.001, 0.01, 0.05, 0.1, 0.3, 0.5, 0.75, 0.8, 1, 1.25, 1.5, 1.75],
         help="The values of d2 to sweep",
     )
     parser.add_argument(

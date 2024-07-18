@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 import subprocess
 
+
 def parse_args(parser=None):
     if parser is None:
         parser = argparse.ArgumentParser()
@@ -19,6 +20,7 @@ def parse_args(parser=None):
         default=0,
         help="The index for default experiment",
     )
+    parser.add_argument("--temp_dir", type=str, default=None)
 
     return parser.parse_args()
 
@@ -42,10 +44,15 @@ def get_top_10_abs_difference(df, default_index):
     return top_10[['std', 'd1', 'd2', 'good_defence', 'wrong_rejection']]
 
 
-def run_detect_adversarial_examples(std, d1, d2, default_index):
-    cmd = f"source ~/NeuralNets/MatrixStatistics/matrix/bin/activate &&" \
-          f" python detect_adversarial_examples.py --std {std} --d1 {d1} --d2 {d2} " \
-          f"--default_index {default_index}"
+def run_detect_adversarial_examples(std, d1, d2, default_index, top, temp_dir=None):
+    if temp_dir is not None:
+        cmd = f"source ENV/bin/activate &&" \
+              f" python detect_adversarial_examples.py --std {std} --d1 {d1} --d2 {d2} " \
+              f"--default_index {default_index} --temp_dir {temp_dir}"
+    else:
+        cmd = f"source ~/NeuralNets/MatrixStatistics/matrix/bin/activate &&" \
+              f" python detect_adversarial_examples.py --std {std} --d1 {d1} --d2 {d2} " \
+              f"--default_index {default_index}"
 
     # Run the command and capture the output
     result = subprocess.run(
@@ -55,12 +62,21 @@ def run_detect_adversarial_examples(std, d1, d2, default_index):
     if result.returncode != 0:
         print(f"Error running script with params --std {std} --d1 {d1} --d2 {d2}: {result.stderr}")
     else:
-        print(f"Successfully ran script with params --std {std} --d1 {d1} --d2 {d2}: {result.stdout}")
+        print(f"Successfully ran script with params --std {std} --d1 {d1} --d2 {d2}")
+
+        with open(f'experiments/{default_index}/results/{top}_output_{std}_{d1}_{d2}.txt', 'w') as f:
+            f.write(result.stdout)
+
 
 if __name__ == "__main__":
     args = parse_args()
 
-    path_output = Path(f'experiments/{args.default_index}/grid_search/grid_search_{args.default_index}.txt')
+    if args.temp_dir is None:
+        path_output = Path(f'experiments/{args.default_index}/grid_search/grid_search_{args.default_index}.txt')
+    else:
+        path_output = Path(f'{args.temp_dir}/experiments/{args.default_index}/grid_search/grid_search_{args.default_index}.txt')
+
+    Path(f'experiments/{args.default_index}/results/').mkdir(parents=True, exist_ok=True)
 
     # Read the results file into a DataFrame
     df = pd.read_csv(path_output)
@@ -75,6 +91,10 @@ if __name__ == "__main__":
     print("Top 10 values for highest absolute difference:")
     print(top_10_abs_diff)
 
-    for _, row in top_10_abs_diff.iterrows():
-        run_detect_adversarial_examples(row['std'], row['d1'], row['d2'], args.default_index)
-
+    count = 0
+    for top, rows in enumerate(top_10_abs_diff.iterrows()):
+        _, row = rows
+        run_detect_adversarial_examples(row['std'], row['d1'], row['d2'], args.default_index, top, args.temp_dir)
+        count += 1
+        if count >= 3:
+            break
