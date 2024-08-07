@@ -43,6 +43,7 @@ def process_sample(ellipsoids, d1, default_index, i, temp_dir):
         a = get_ellipsoid_data(ellipsoids, pred, "std")
         b = zero_std(mat, a, d1)
         c = b.expand([1])
+        print(f'Sample value: {c}', flush=True)
         return c
     else:
         #raise ValueError(f'{temp_dir}/experiments/{default_index}/rejection_levels/matrices/{i}/matrix.pth')
@@ -88,21 +89,21 @@ def main():
             epoch = experiment['epoch'] - 1
 
         except KeyError:
-            print(f"Error: Default index {args.default_index} does not exist.")
+            print(f"Error: Default index {args.default_index} does not exist.", flush=True)
             return -1
 
     else:
         raise ValueError("Default index not specified in constants/constants.py")
 
-    print("Experiment: ", args.default_index)
+    print("Experiment: ", args.default_index, flush=True)
 
     weights_path = Path(f'{args.temp_dir}/experiments/{args.default_index}/weights') / f'epoch_{epoch}.pth'
     if not weights_path.exists():
-        raise ValueError(f"Experiment needs to be trained")
+        raise ValueError(f"Experiment needs to be trained: {weights_path}")
 
     matrices_path = Path(f'{args.temp_dir}/experiments/{args.default_index}/matrices/matrix_statistics.json')
     if not matrices_path.exists():
-        raise ValueError(f"Matrix statistics have to be computed")
+        raise ValueError(f"Matrix statistics have to be computed: {matrices_path}")
 
     exp_dataset_train = torch.load(f'{args.temp_dir}/experiments/{args.default_index}/rejection_levels/exp_dataset_train.pth')
     ellipsoids_file = open(f"{args.temp_dir}/experiments/{args.default_index}/matrices/matrix_statistics.json")

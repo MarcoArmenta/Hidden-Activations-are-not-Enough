@@ -21,14 +21,14 @@ def parse_args(parser=None):
         "--d1_values",
         type=float,
         nargs='+',
-        default=[0.001, 0.01, 0.05, 0.1, 0.3, 0.5, 0.75, 0.8, 1, 1.25, 1.5, 1.75],
+        default=[0.01, 0.1, 0.3, 0.5, 0.75, 0.8, 1, 1.25, 1.5],
         help="The values of d1 to sweep",
     )
     parser.add_argument(
         "--d2_values",
         type=float,
         nargs='+',
-        default=[0.001, 0.01, 0.05, 0.1, 0.3, 0.5, 0.75, 0.8, 1, 1.25, 1.5, 1.75],
+        default=[0.01, 0.1, 0.3, 0.5, 0.75, 0.8, 1, 1.25, 1.5],
         help="The values of d2 to sweep",
     )
     parser.add_argument(
@@ -71,9 +71,9 @@ def run_adv_examples_script(params):
     std, d1, d2, index, lock, output_file, temp_dir = params
     print(f'Running parameters: {params}', flush=True)
 
-    if check_param_combination_exists(output_file, std, d1, d2, index):
-        print(f"Skipping existing params: std={std}, d1={d1}, d2={d2}, default_index={index}")
-        return
+    #if check_param_combination_exists(output_file, std, d1, d2, index):
+    #    print(f"Skipping existing params: std={std}, d1={d1}, d2={d2}, default_index={index}")
+    #    return
 
     if temp_dir is None:
         cmd = f"source ~/NeuralNets/MatrixStatistics/matrix/bin/activate &&" \
