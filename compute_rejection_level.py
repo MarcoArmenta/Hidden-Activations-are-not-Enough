@@ -97,10 +97,6 @@ def main():
 
     print("Experiment: ", args.default_index, flush=True)
 
-    weights_path = Path(f'{args.temp_dir}/experiments/{args.default_index}/weights') / f'epoch_{epoch}.pth'
-    if not weights_path.exists():
-        raise ValueError(f"Experiment needs to be trained: {weights_path}")
-
     matrices_path = Path(f'{args.temp_dir}/experiments/{args.default_index}/matrices/matrix_statistics.json')
     if not matrices_path.exists():
         raise ValueError(f"Matrix statistics have to be computed: {matrices_path}")

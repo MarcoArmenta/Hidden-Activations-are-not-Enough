@@ -1,10 +1,10 @@
 #!/bin/bash
 
-#SBATCH --account=def-assem #account to charge the calculation
-#SBATCH --time=03:00:00 #hour:minutes:seconds
-#SBATCH --cpus-per-task=10 #number of CPU requested
-#SBATCH --mem-per-cpu=6G #memory requested
-#SBATCH --array=9-10
+#SBATCH --account=def-ko1 #account to charge the calculation
+#SBATCH --time=4:00:00 #hour:minutes:seconds
+#SBATCH --cpus-per-task=15 #number of CPU requested
+#SBATCH --mem-per-cpu=2G #memory requested
+#SBATCH --array=8
 
 module load StdEnv/2020 scipy-stack/2023a #load the required module
 source ENV/bin/activate #load the virtualenv (absolute or relative path to where the script is submitted)

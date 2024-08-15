@@ -2,9 +2,10 @@
 
 #SBATCH --account=def-assem #account to charge the calculation
 #SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=3
-#SBATCH --time=01:30:00 #hour:minutes:seconds
-#SBATCH --mem=40G #memory requested
+#SBATCH --cpus-per-task=2
+#SBATCH --time=00:30:00 #hour:minutes:seconds
+#SBATCH --mem=8G #memory requested
+#SBATCH --array=8
 
 module load StdEnv/2020 scipy-stack/2023a cuda cudnn #load the required module
 
@@ -18,5 +19,4 @@ echo "Fashion ready"
 
 source ENV/bin/activate #load the virtualenv (absolute or relative path to where the script is submitted)
 echo "Environment ready"
-python training.py --default_index 13 --data_path $SLURM_TMPDIR/data/
-python training.py --default_index 14 --data_path $SLURM_TMPDIR/data/
+python training.py --default_index $SLURM_ARRAY_TASK_ID --data_path $SLURM_TMPDIR/data/

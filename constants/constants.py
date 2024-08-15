@@ -12,7 +12,9 @@ ARCHITECTURES = [# 0 -> 0, 1, 2, 3
                  # 5 -> 13, 14
                  (675000, 1500, 1500, 1500, 1500),
                  # 6 -> 15, 16
-                 (2500000, )
+                 (2500000, ),
+                 # 7 -> 8
+                 (814, 351, 118, 467, 823, 191, 756, 628, 935, 270)
                  ]
 # TODO: the more MLPs the better
 # TODO: add validation set
@@ -132,17 +134,17 @@ DEFAULT_EXPERIMENTS = {
         'dropout': 0,
     },
     'experiment_8': {
-        'architecture_index': 2,
+        'architecture_index': 7,
         'optimizer': 'adam',
         'dataset': 'mnist',
-        'lr': 0.00026094748208914696,
-        'batch_size': 1681,
-        'epoch': 11,
+        'lr': 0.001,
+        'batch_size': 128,
+        'epoch': 6,
         'reduce_lr_each': 20,
         'save_every_epochs': 5,
         'residual': False,
         'weight_decay': 0,
-        'dropout': 0.19057126857365506,
+        'dropout': 0,
     },
     'experiment_9': {
         'architecture_index': 3,

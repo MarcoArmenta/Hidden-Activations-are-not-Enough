@@ -5,7 +5,7 @@ from multiprocessing import Pool, Manager
 import os
 import pandas as pd
 from pathlib import Path
-
+import json
 
 def parse_args(parser=None):
     if parser is None:
@@ -44,6 +44,7 @@ def parse_args(parser=None):
         help="Number of threads for parallel computation",
     )
     parser.add_argument("--temp_dir", type=str, default=None)
+    parser.add_argument("--rej_lev", type=int, default=1)
 
     return parser.parse_args()
 
@@ -68,40 +69,43 @@ def check_param_combination_exists(output_file, std, d1, d2, index):
 
 # Function to run the generate_adversarial_examples.py script with given parameters
 def run_adv_examples_script(params):
-    std, d1, d2, index, lock, output_file, temp_dir = params
+    std, d1, d2, index, lock, output_file, temp_dir, rej_lev_flag = params
     print(f'Running parameters: {params}', flush=True)
+    reject_path = f'experiments/{index}/rejection_levels/reject_at_{std}_{d1}.json'
 
-    #if check_param_combination_exists(output_file, std, d1, d2, index):
-    #    print(f"Skipping existing params: std={std}, d1={d1}, d2={d2}, default_index={index}")
-    #    return
+    if os.path.exists(reject_path):
+        print("Loading rejection level...", flush=True)
+        file = open(reject_path)
+        reject_at = json.load(file)[0]
+        if reject_at < 1:
+            print("Rejection level too low", flush=True)
+            return
 
-    if temp_dir is None:
-        cmd = f"source ~/NeuralNets/MatrixStatistics/matrix/bin/activate &&" \
-              f" python compute_rejection_level.py --std {std} --d1 {d1} " \
-              f"--default_index {index}"
-    else:
-        cmd = f"source ENV/bin/activate &&" \
+
+
+    cmd = f"source ENV/bin/activate &&" \
               f" python compute_rejection_level.py --std {std} --d1 {d1} " \
               f"--default_index {index} --temp_dir {temp_dir}"
-    result = subprocess.run(
-        cmd, shell=True, capture_output=True, text=True, executable="/bin/bash"
-    )
+    if rej_lev_flag == 1:
+        result = subprocess.run(
+            cmd, shell=True, capture_output=True, text=True, executable="/bin/bash"
+        )
 
-    if result.returncode != 0:
-        print(f"Error running compute_rejection_level.py with params {params}: {result.stderr}",flush=True)
+        if result.returncode != 0:
+            print(f"Error running compute_rejection_level.py with params {params}: {result.stderr}",flush=True)
+            return
+
+        output_lines = result.stdout.split('\n')
+        for line in output_lines:
+            if "Rejection level" in line:
+                rej_lev = float(line.split()[-1].strip(':'))
+
+        if rej_lev < 1:
+            return
+
         return
 
-    output_lines = result.stdout.split('\n')
-    for line in output_lines:
-        if "Rejection level" in line:
-            rej_lev = float(line.split()[-1].strip(':'))
-
-    if temp_dir is None:
-        cmd = f"source ~/NeuralNets/MatrixStatistics/matrix/bin/activate &&" \
-              f" python detect_adversarial_examples.py --std {std} --d1 {d1} --d2 {d2} " \
-              f"--default_index {index} --temp_dir {temp_dir}"
-    else:
-        cmd = f"source ENV/bin/activate &&" \
+    cmd = f"source ENV/bin/activate &&" \
               f" python detect_adversarial_examples.py --std {std} --d1 {d1} --d2 {d2} " \
               f"--default_index {index} --temp_dir {temp_dir}"
 
@@ -125,8 +129,6 @@ def run_adv_examples_script(params):
 
     if good_defences is not None and wrong_rejection is not None:
         result_line = f"{std},{d1},{d2},default {index},{good_defences},{wrong_rejection}\n"
-    else:
-        result_line = f"{std},{d1},{d2},default {index},rej_lev={rej_lev}\n"
 
     print(result_line.strip())
 
@@ -137,6 +139,7 @@ def run_adv_examples_script(params):
 
 
 def main():
+    import numpy as np
     print("Grid search starting...",flush=True)
     args = parse_args()
 
@@ -145,12 +148,34 @@ def main():
     output_file = experiment_path / f'grid_search_{args.default_index}.txt'
 
     # Define the parameter grid
-    std_values = args.std_values
-    d1_values = args.d1_values
-    d2_values = args.d2_values
+    vals = np.geomspace(0.00001, 1, num=10)
+    std_values = vals # args.std_values
+    d1_values = vals #args.d1_values
+    d2_values = vals #args.d2_values
     indexes = [args.default_index]
 
-    param_grid = list(itertools.product(std_values, d1_values, d2_values, indexes))
+    # Define the directory path
+    dir_path = f'experiments/{args.default_index}/rejection_levels/'
+
+    # Initialize an empty list to store the files with value >= 1
+    files_to_keep = []
+
+    if args.rej_lev==0:
+        # Iterate over the files in the directory
+        for filename in os.listdir(dir_path):
+            # Check if the file starts with 'reject_at_'
+            if filename.startswith('reject_at_'):
+                # Open the file and load the JSON data
+                filepath = os.path.join(dir_path, filename)
+                if os.path.exists(filepath):
+                    with open(os.path.join(dir_path, filename), 'r') as f:
+                        data = json.load(f)
+                    # Check if the value is greater than or equal to 1
+                    if data[0] >= 1:
+                        # If true, add the file to the list
+                        files_to_keep.append(filename)
+
+    param_grid = list(itertools.product(std_values, d1_values, d2_values, indexes, [args.rej_lev]))
 
     # Use Manager to create a Lock
     with Manager() as manager:
@@ -162,15 +187,17 @@ def main():
                 f.write("std,d1,d2,default_index,good_defence,wrong_rejection\n")
 
         # Prepare arguments for the workers
-        param_grid_with_lock = [(std, d1, d2, index, lock, output_file, args.temp_dir) for std, d1, d2, index in param_grid]
-
-        #for args in param_grid_with_lock:
-        #    print(f'Running parameters: {args}')
-        #    run_adv_examples_script(args)
+        param_grid_with_lock = [(std, d1, d2, index, lock, output_file, args.temp_dir, args.rej_lev) for std, d1, d2, index, _ in param_grid]
 
         # Use multiprocessing Pool to run the scripts in parallel
-        with Pool(processes=args.nb_workers) as pool:
-            pool.map(run_adv_examples_script, param_grid_with_lock)
+        if args.rej_lev == 0:
+            param_grid_filtered = [(std, d1, d2, index, lock, output_file, args.temp_dir, args.rej_lev) for std, d1, d2, index, lock, output_file, args.temp_dir, _ in param_grid_with_lock if f'reject_at_{std}_{d1}.json' in files_to_keep]
+            with Pool(processes=args.nb_workers) as pool:
+                pool.map(run_adv_examples_script, param_grid_filtered)
+        else:
+            param_grid_with_lock_rej_lev = [(std, d1, 0, index, lock, output_file, args.temp_dir, args.rej_lev) for std, d1, d2, index, _ in param_grid]
+            with Pool(processes=args.nb_workers) as pool:
+                pool.map(run_adv_examples_script, param_grid_with_lock_rej_lev)
 
 
 if __name__ == "__main__":

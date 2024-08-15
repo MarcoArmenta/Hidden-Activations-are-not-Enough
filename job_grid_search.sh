@@ -1,10 +1,10 @@
 #!/bin/bash
 
 #SBATCH --account=def-bruestle #account to charge the calculation
-#SBATCH --time=02:00:00 #hour:minutes:seconds
-#SBATCH --cpus-per-task=10 #number of CPU requested
-#SBATCH --mem-per-cpu=1G #memory requested
-#SBATCH --array=7-8
+#SBATCH --time=1:00:00 #hour:minutes:seconds
+#SBATCH --cpus-per-task=1 #number of CPU requested
+#SBATCH --mem-per-cpu=15G #memory requested
+#SBATCH --array=13
 
 module load StdEnv/2020 scipy-stack/2023a #load the required module
 source ENV/bin/activate #load the virtualenv (absolute or relative path to where the script is submitted)
@@ -42,5 +42,5 @@ unzip $SLURM_TMPDIR/experiments/$SLURM_ARRAY_TASK_ID/rejection_levels/matrices/m
 
 echo "All data ready!"
 
-python grid_search.py --nb_workers=$SLURM_CPUS_PER_TASK --default_index $SLURM_ARRAY_TASK_ID --temp_dir $SLURM_TMPDIR
+python grid_search.py --nb_workers=$SLURM_CPUS_PER_TASK --default_index $SLURM_ARRAY_TASK_ID --temp_dir $SLURM_TMPDIR --rej_lev 0
 echo "Grid search finished !!!"

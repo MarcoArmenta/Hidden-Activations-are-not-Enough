@@ -1,10 +1,10 @@
 #!/bin/bash
 
-#SBATCH --account=def-bruestle #account to charge the calculation
-#SBATCH --time=168:00:00 #hour:minutes:seconds
-#SBATCH --cpus-per-task=6 #number of CPU requested
-#SBATCH --mem-per-cpu=150G #memory requested
-#SBATCH --array=16
+#SBATCH --account=def-ko1 #account to charge the calculation
+#SBATCH --time=15:00:00 #hour:minutes:seconds
+#SBATCH --cpus-per-task=10 #number of CPU requested
+#SBATCH --mem-per-cpu=3G #memory requested
+#SBATCH --array=8
 
 module load StdEnv/2020 scipy-stack/2023a #load the required module
 source ENV/bin/activate #load the virtualenv (absolute or relative path to where the script is submitted)
