@@ -16,17 +16,9 @@ ARCHITECTURES = [# 0 -> 0, 1, 2, 3
                  # 7 -> 8
                  (814, 351, 118, 467, 823, 191, 756, 628, 935, 270)
                  ]
-# TODO: the more MLPs the better
-# TODO: add validation set
-# TODO: Train BIG mlp for a lot of time
-# TODO: pretrained mlps on the internet
-
-# TODO: ignore cifar10 for now...
-# TODO: data augmentation for cifar10 performance
 
 ATTACKS = ["GN", "FGSM", "RFGSM", "PGD", "EOTPGD", "FFGSM", "TPGD", "MIFGSM", "UPGD", "DIFGSM", "NIFGSM",
-           "PGDRS", "SINIFGSM", "VMIFGSM", "VNIFGSM", "CW", "PGDL2", "PGDRSL2", "DeepFool", "SparseFool",
-           "OnePixel", "Pixle", "FAB"]
+           "PGDRS", "VMIFGSM", "VNIFGSM", "CW", "PGDL2", "PGDRSL2", "DeepFool", "SparseFool", "OnePixel", "Pixle"]
 
 DEFAULT_EXPERIMENTS = {
     'experiment_0': {
@@ -198,7 +190,7 @@ DEFAULT_EXPERIMENTS = {
         'weight_decay': 0,
         'dropout': 0,
     },
-    'experiment_13': { #TODO: this only trains on 40 GBs GPU
+    'experiment_13': { #this only trains on 40 GBs GPU
         'architecture_index': 5,
         'optimizer': 'momentum',
         'dataset': 'mnist',
@@ -211,7 +203,7 @@ DEFAULT_EXPERIMENTS = {
         'weight_decay': 1e-5,
         'dropout': 0.5,
     },
-    'experiment_14': { #TODO: this only trains on 40 GBs GPU
+    'experiment_14': { #this only trains on 40 GBs GPU
         'architecture_index': 5,
         'optimizer': 'momentum',
         'dataset': 'fashion',
@@ -224,7 +216,7 @@ DEFAULT_EXPERIMENTS = {
         'weight_decay': 1e-5,
         'dropout': 0.5,
     },
-    'experiment_15': { #TODO: this only trains on 40 GBs GPU
+    'experiment_15': { #this only trains on 40 GBs GPU
         'architecture_index': 6,
         'optimizer': 'momentum',
         'dataset': 'mnist',
@@ -237,7 +229,7 @@ DEFAULT_EXPERIMENTS = {
         'weight_decay': 0,
         'dropout': 0,
     },
-    'experiment_16': { #TODO: this only trains on 40 GBs GPU
+    'experiment_16': { #this only trains on 40 GBs GPU
         'architecture_index': 6,
         'optimizer': 'momentum',
         'dataset': 'fashion',

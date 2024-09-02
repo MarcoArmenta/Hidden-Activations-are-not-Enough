@@ -34,7 +34,13 @@ def parse_args(parser=None):
         default=0.1,
         help="Determines how small should the standard deviation be per coordinate when detecting.",
     )
-    parser.add_argument("--temp_dir",type=str,default=None)
+    parser.add_argument(
+        "--temp_dir",
+        type=str,
+        default=None,
+        help="Temporary directory to read data for computations from, such as weights, matrix statistics and adversarial matrices."
+             "Useful on clusters but not on local experiments.",
+    )
 
     return parser.parse_args()
 
@@ -49,11 +55,16 @@ def reject_predicted_attacks(default_index,
                              std: float = 2,
                              d1: float = 0.1,
                              d2: float = 0.1,
-                             verbose: bool = True, temp_dir=None) -> None:
+                             verbose: bool = True,
+                             temp_dir=None) -> None:
 
-    # Compute mean and std of number of (almost) zero dims
-    reject_path = f'{temp_dir}/experiments/{default_index}/rejection_levels/reject_at_{std}_{d1}.json'
-    Path(f'{temp_dir}/experiments/{default_index}/rejection_levels/').mkdir(parents=True, exist_ok=True)
+    if temp_dir is not None:
+        reject_path = f'{temp_dir}/experiments/{default_index}/rejection_levels/reject_at_{std}_{d1}.json'
+        Path(f'{temp_dir}/experiments/{default_index}/rejection_levels/').mkdir(parents=True, exist_ok=True)
+    else:
+        reject_path = f'experiments/{default_index}/rejection_levels/reject_at_{std}_{d1}.json'
+        Path(f'experiments/{default_index}/rejection_levels/').mkdir(parents=True, exist_ok=True)
+
     model = get_model(weights_path, architecture_index, residual, input_shape, dropout)
 
     if os.path.exists(reject_path):
@@ -61,14 +72,14 @@ def reject_predicted_attacks(default_index,
         file = open(reject_path)
         reject_at = json.load(file)[0]
     else:
-        print(f"File does not exists: {reject_path}",flush=True)
-        #raise ValueError(f"File does not exists: {reject_path}")
-        return
-    if reject_at <= 0:
-        print(f"Rejection level too small: {reject_at}",flush=True)
+        print(f"File does not exists: {reject_path}", flush=True)
         return
 
-    print(f"Will reject when 'zero dims' < {reject_at}.",flush=True)
+    if reject_at <= 0:
+        print(f"Rejection level too small: {reject_at}", flush=True)
+        return
+
+    print(f"Will reject when 'zero dims' < {reject_at}.", flush=True)
     adv_succes = {attack: [] for attack in ["test"]+ATTACKS}  # Save adversarial examples that were not detected
     results = []  # (Rejected, Was attacked)
     # For test counts how many were trusted, and for attacks how many where detected
@@ -77,23 +88,33 @@ def reject_predicted_attacks(default_index,
                     'rejected_and_attacked': 0,
                     'rejected_and_not_attacked': 0} for key in ["test"] + ATTACKS}
 
-    path_adv_matrices = f'{temp_dir}/experiments/{default_index}/adversarial_matrices/'
-    attacked_dataset = torch.load(f'{temp_dir}/experiments/{default_index}/adversarial_examples/adversarial_examples.pth')
-    test_labels = torch.load(f'{temp_dir}/experiments/{default_index}/adversarial_examples/test/labels.pth')
+    if temp_dir is not None:
+        path_adv_matrices = f'{temp_dir}/experiments/{default_index}/adversarial_matrices/'
+        test_labels = torch.load(f'{temp_dir}/experiments/{default_index}/adversarial_examples/test/labels.pth')
+    else:
+        path_adv_matrices = f'experiments/{default_index}/adversarial_matrices/'
+        test_labels = torch.load(f'experiments/{default_index}/adversarial_examples/test/labels.pth')
+
     test_acc = 0
 
     for a in ["test"]+ATTACKS:
+        print(f"Trying for {a}", flush=True)
+        try:
+            if temp_dir is not None:
+                attacked_dataset = torch.load(f'{temp_dir}/experiments/{default_index}/adversarial_examples/{a}/adversarial_examples.pth')
+            else:
+                attacked_dataset = torch.load(f'experiments/{default_index}/adversarial_examples/{a}/adversarial_examples.pth')
+        except:
+            print(f"Attack {a} not found.", flush=True)
+            continue
         not_rejected_and_attacked = 0
         not_rejected_and_not_attacked = 0
         rejected_and_attacked = 0
         rejected_and_not_attacked = 0
-        try:
-            Num = len(attacked_dataset[a])
-        except:
-            continue
-        for i in range(len(attacked_dataset[a])):
+
+        for i in range(len(attacked_dataset)):
             current_matrix_path = path_adv_matrices + f"{a}/{i}/matrix.pth"
-            im = attacked_dataset[a][i]
+            im = attacked_dataset[i]
             pred = torch.argmax(model.forward(im))
             mat = torch.load(current_matrix_path)
 
@@ -130,13 +151,11 @@ def reject_predicted_attacks(default_index,
 
             results.append(res)
 
-
-
         if verbose:
             print("Attack method: ", a, flush=True)
             if a == 'test':
-                print(f'Wrongly rejected test data : {rejected_and_not_attacked} out of {len(attacked_dataset[a])}', flush=True)
-                print(f'Trusted test data : {not_rejected_and_not_attacked} out of {len(attacked_dataset[a])}', flush=True)
+                print(f'Wrongly rejected test data : {rejected_and_not_attacked} out of {len(attacked_dataset)}', flush=True)
+                print(f'Trusted test data : {not_rejected_and_not_attacked} out of {len(attacked_dataset)}', flush=True)
 
                 if counts['test']['not_rejected_and_not_attacked'] == 0:
                     test_acc = 0
@@ -147,10 +166,8 @@ def reject_predicted_attacks(default_index,
                       test_acc, flush=True)
 
             else:
-                print(f'Detected adversarial examples : {rejected_and_attacked} out of {len(attacked_dataset[a]) if a in attacked_dataset else 0}', flush=True)
-                print(f'Successful adversarial examples : {not_rejected_and_attacked} out of {len(attacked_dataset[a]) if a in attacked_dataset else 0}', flush=True)
-                #print(f'Detected adversarial examples : {rejected_and_attacked} out of {len(attacked_dataset[a])}', flush=True)
-                #print(f'Successful adversarial examples : {not_rejected_and_attacked} out of {len(attacked_dataset[a])}', flush=True)
+                print(f'Detected adversarial examples : {rejected_and_attacked} out of {len(attacked_dataset) if a in attacked_dataset else 0}', flush=True)
+                print(f'Successful adversarial examples : {not_rejected_and_attacked} out of {len(attacked_dataset) if a in attacked_dataset else 0}', flush=True)
 
     counts_file = f'experiments/{default_index}/counts_per_attack/counts_per_attack_{std}_{d1}_{d2}.json'
     Path(f'experiments/{default_index}/counts_per_attack/').mkdir(parents=True, exist_ok=True)
@@ -172,23 +189,6 @@ def reject_predicted_attacks(default_index,
             wrongly_rejected += int(rej)
     print(f"Percentage of good defences: {good_defence/num_att}", flush=True)
     print(f"Percentage of wrong rejections: {wrongly_rejected/(len(results)-num_att)}", flush=True)
-
-    counts_tensor = torch.tensor([counts[key]['not_rejected_and_attacked'] for key in ATTACKS], dtype=torch.float)
-    #num_attacked_samples = torch.tensor([len(attacked_dataset[key]) for key in ATTACKS], dtype=torch.float)
-    num_attacked_samples = torch.tensor([len(attacked_dataset[key]) if key in attacked_dataset else 0 for key in ATTACKS], dtype=torch.float)
-    normalized_counts = counts_tensor / num_attacked_samples
-    probabilities = {key: normalized_counts[i].item() for i, key in enumerate(ATTACKS)}
-
-    Path(f'experiments/{default_index}/adversarial_examples/probabilities_adv_success/').mkdir(parents=True, exist_ok=True)
-    probs = f'experiments/{default_index}/adversarial_examples/probabilities_adv_success/' \
-            f'prob-adv-success-per-attack_{std}_{d1}_{d2}.json'
-    with open(probs, 'w') as json_file:
-        json.dump(probabilities, json_file, indent=4)
-
-    Path(f'experiments/{default_index}/adversarial_examples/adversarial_success').mkdir(parents=True, exist_ok=True)
-    torch.save(adv_succes,
-               f'experiments/{default_index}/adversarial_examples/adversarial_success/'
-               f'adv_success_{std}_{d1}_{d2}.pth')
 
 
 def main():
@@ -212,17 +212,23 @@ def main():
 
     print("Detecting adversarial examples for Experiment: ", args.default_index, flush=True)
 
-    weights_path = Path(f'{args.temp_dir}/experiments/{args.default_index}/weights') / f'epoch_{epoch}.pth'
+    input_shape = (3, 32, 32) if dataset == 'cifar10' else (1, 28, 28)
+
+    if args.temp_dir is not None:
+        weights_path = Path(f'{args.temp_dir}/experiments/{args.default_index}/weights') / f'epoch_{epoch}.pth'
+        matrices_path = Path(f'{args.temp_dir}/experiments/{args.default_index}/matrices/matrix_statistics.json')
+        ellipsoids_file = open(f"{args.temp_dir}/experiments/{args.default_index}/matrices/matrix_statistics.json")
+    else:
+        weights_path = Path(f'experiments/{args.default_index}/weights') / f'epoch_{epoch}.pth'
+        matrices_path = Path(f'experiments/{args.default_index}/matrices/matrix_statistics.json')
+        ellipsoids_file = open(f"experiments/{args.default_index}/matrices/matrix_statistics.json")
+
     if not weights_path.exists():
         raise ValueError(f"Experiment needs to be trained")
 
-    matrices_path = Path(f'{args.temp_dir}/experiments/{args.default_index}/matrices/matrix_statistics.json')
     if not matrices_path.exists():
         raise ValueError(f"Matrix statistics have to be computed")
 
-    input_shape = (3, 32, 32) if dataset == 'cifar10' else (1, 28, 28)
-
-    ellipsoids_file = open(f"{args.temp_dir}/experiments/{args.default_index}/matrices/matrix_statistics.json")
     ellipsoids = json.load(ellipsoids_file)
 
     reject_predicted_attacks(args.default_index,
@@ -235,7 +241,8 @@ def main():
                              args.std,
                              args.d1,
                              args.d2,
-                             verbose=True, temp_dir=args.temp_dir)
+                             verbose=True,
+                             temp_dir=args.temp_dir)
 
 
 if __name__ == '__main__':
