@@ -1,5 +1,4 @@
-from utils.utils import get_ellipsoid_data, zero_std, get_model
-from constants.constants import DEFAULT_EXPERIMENTS
+from utils.utils import get_ellipsoid_data, zero_std
 from pathlib import Path
 import argparse
 import torch
@@ -28,14 +27,23 @@ def parse_args(parser=None):
         default=0.1,
         help="Determines how small should the standard deviation be per coordinate on matrix statistics.",
     )
-    parser.add_argument("--temp_dir", type=str, default=None)
+    parser.add_argument(
+        "--temp_dir",
+        type=str,
+        default=None,
+        help="Temporary directory to save and read data. Useful when using clusters.",
+    )
 
     return parser.parse_args()
 
 
 def process_sample(ellipsoids, d1, default_index, i, temp_dir):
-    path_experiment_matrix = Path(f'{temp_dir}/experiments/{default_index}/rejection_levels/matrices/{i}/matrix.pth')
-    path_prediction = Path(f'{temp_dir}/experiments/{default_index}/rejection_levels/matrices/{i}/prediction.pth')
+    if temp_dir is not None:
+        path_experiment_matrix = Path(f'{temp_dir}/experiments/{default_index}/rejection_levels/matrices/{i}/matrix.pth')
+        path_prediction = Path(f'{temp_dir}/experiments/{default_index}/rejection_levels/matrices/{i}/prediction.pth')
+    else:
+        path_experiment_matrix = Path(f'experiments/{default_index}/rejection_levels/matrices/{i}/matrix.pth')
+        path_prediction = Path(f'experiments/{default_index}/rejection_levels/matrices/{i}/prediction.pth')
 
     if os.path.exists(path_experiment_matrix):
         mat = torch.load(path_experiment_matrix)
@@ -43,12 +51,8 @@ def process_sample(ellipsoids, d1, default_index, i, temp_dir):
         a = get_ellipsoid_data(ellipsoids, pred, "std")
         b = zero_std(mat, a, d1)
         c = b.expand([1])
-        print(f'Sample value: {c}', flush=True)
         return c
     else:
-        #raise ValueError(f'{temp_dir}/experiments/{default_index}/rejection_levels/matrices/{i}/matrix.pth')
-        #print(f"Empty matrix at process sample", flush=True)
-        #print(f'{temp_dir}/experiments/{default_index}/rejection_levels/matrices/{i}/matrix.pth', flush=True)
         return None
 
 
@@ -56,13 +60,12 @@ def compute_rejection_level(exp_dataset_train: torch.Tensor,
                              default_index,
                              ellipsoids: dict,
                              std: float = 2,
-                             d1: float = 0.1, temp_dir=None) -> None:
+                             d1: float = 0.1,
+                            temp_dir=None) -> None:
 
     # Compute mean and std of number of (almost) zero dims
     reject_path = f'experiments/{default_index}/rejection_levels/reject_at_{std}_{d1}.json'
-    reject_path_temp = f'{temp_dir}/experiments/{default_index}/rejection_levels/reject_at_{std}_{d1}.json'
     Path(f'experiments/{default_index}/rejection_levels/').mkdir(parents=True, exist_ok=True)
-    Path(f'{temp_dir}/experiments/{default_index}/rejection_levels/').mkdir(parents=True, exist_ok=True)
     print("Computing rejection level...", flush=True)
 
     results = []
@@ -78,38 +81,32 @@ def compute_rejection_level(exp_dataset_train: torch.Tensor,
     with open(reject_path, 'w') as json_file:
         json.dump([reject_at], json_file, indent=4)
 
-    with open(reject_path_temp, 'w') as json_file:
-        json.dump([reject_at], json_file, indent=4)
 
 def main():
     args = parse_args()
-    if args.default_index is not None:
-        try:
-            experiment = DEFAULT_EXPERIMENTS[f'experiment_{args.default_index}']
-            epoch = experiment['epoch'] - 1
-
-        except KeyError:
-            print(f"Error: Default index {args.default_index} does not exist.", flush=True)
-            return -1
-
-    else:
-        raise ValueError("Default index not specified in constants/constants.py")
 
     print("Experiment: ", args.default_index, flush=True)
 
-    matrices_path = Path(f'{args.temp_dir}/experiments/{args.default_index}/matrices/matrix_statistics.json')
+    if args.temp_dir is not None:
+        matrices_path = Path(f'{args.temp_dir}/experiments/{args.default_index}/matrices/matrix_statistics.json')
+        exp_dataset_train = torch.load(f'{args.temp_dir}/experiments/{args.default_index}/rejection_levels/exp_dataset_train.pth')
+        ellipsoids_file = open(f"{args.temp_dir}/experiments/{args.default_index}/matrices/matrix_statistics.json")
+    else:
+        matrices_path = Path(f'experiments/{args.default_index}/matrices/matrix_statistics.json')
+        exp_dataset_train = torch.load(f'experiments/{args.default_index}/rejection_levels/exp_dataset_train.pth')
+        ellipsoids_file = open(f"experiments/{args.default_index}/matrices/matrix_statistics.json")
+
     if not matrices_path.exists():
         raise ValueError(f"Matrix statistics have to be computed: {matrices_path}")
 
-    exp_dataset_train = torch.load(f'{args.temp_dir}/experiments/{args.default_index}/rejection_levels/exp_dataset_train.pth')
-    ellipsoids_file = open(f"{args.temp_dir}/experiments/{args.default_index}/matrices/matrix_statistics.json")
     ellipsoids = json.load(ellipsoids_file)
 
     compute_rejection_level(exp_dataset_train,
                             args.default_index,
                             ellipsoids,
                             args.std,
-                            args.d1, args.temp_dir)
+                            args.d1,
+                            args.temp_dir)
 
 
 if __name__ == '__main__':

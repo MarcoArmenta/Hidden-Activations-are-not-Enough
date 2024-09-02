@@ -1,8 +1,6 @@
 """
     Creates adversarial examples
 """
-import os
-import json
 import torch
 import torchattacks
 import argparse
@@ -26,7 +24,7 @@ def parse_args(parser=None):
         "--test_size",
         type=int,
         default=-1,
-        help="Size of subset of test data from where to generate adversarial examples.",
+        help="Size of subset of test data from where to generate adversarial examples. As default -1 takes 10k test samples",
     )
     parser.add_argument(
         "--nb_workers",
@@ -34,8 +32,10 @@ def parse_args(parser=None):
         default=8,
         help="How many processes in parallel for adversarial examples computations and their matrices.",
     )
-    parser.add_argument("--weights_path", type=str, help="path to weights")
-    parser.add_argument("--data_path", type=str, help="path to dataset")
+    parser.add_argument(
+        "--temp_dir",
+        type=str,
+        help="Temporary directory for reading data when using clusters.")
     return parser.parse_args()
 
 
@@ -65,7 +65,6 @@ def apply_attack(attack_name, data, labels, weights_path, architecture_index, pa
                                 torchattacks.Jitter(model),
                                 torchattacks.NIFGSM(model),
                                 torchattacks.PGDRS(model),
-                                torchattacks.SINIFGSM(model),
                                 torchattacks.VMIFGSM(model),
                                 torchattacks.VNIFGSM(model),
                                 torchattacks.CW(model),
@@ -75,7 +74,6 @@ def apply_attack(attack_name, data, labels, weights_path, architecture_index, pa
                                 torchattacks.SparseFool(model),
                                 torchattacks.OnePixel(model),
                                 torchattacks.Pixle(model),
-                                torchattacks.FAB(model),
                                 ]))
     try:
         attacked_data = attacks_classes[attack_name](data, labels)
@@ -108,16 +106,15 @@ def generate_adversarial_examples(exp_dataset_test: torch.Tensor,
                                   exp_labels_test: torch.Tensor,
                                   weights_path,
                                   architecture_index,
-                                  experiment,
+                                  default_index,
                                   nb_workers,
                                   residual,
                                   input_shape,
                                   dropout
                                   ):
 
-    experiment_dir = Path(f'experiments/{experiment}/adversarial_examples')
+    experiment_dir = Path(f'experiments/{default_index}/adversarial_examples')
     experiment_dir.mkdir(parents=True, exist_ok=True)
-    path_adv_examples = experiment_dir / 'adversarial_examples.pth'
 
     print("Generating adversarial examples...", flush=True)
 
@@ -135,18 +132,8 @@ def generate_adversarial_examples(exp_dataset_test: torch.Tensor,
                   dropout)
                  for attack_name in ["test"] + ATTACKS]
 
-    if os.path.exists(path_adv_examples):
-        attacked_dataset = torch.load(path_adv_examples)
-    else:
-        with Pool(processes=nb_workers) as pool:
-            results = pool.starmap(apply_attack, arguments)
-        attacked_dataset = {attack_name: result for attack_name, result in results}
-        torch.save(attacked_dataset, path_adv_examples)
-
-    number_of_attacks_path = experiment_dir / 'number_examples_per_attack.json'
-    nb_attacks = {a: len(attacked_dataset[a]) if attacked_dataset[a] is not None else 0 for a in attacked_dataset.keys()}
-    with number_of_attacks_path.open('w') as json_file:
-        json.dump(nb_attacks, json_file, indent=4)
+    with Pool(processes=nb_workers) as pool:
+        pool.starmap(apply_attack, arguments)
 
 
 def main():
@@ -172,13 +159,16 @@ def main():
 
     print("Experiment: ", args.default_index)
 
-    #weights_path = Path(f'experiments/{args.default_index}/weights') / f'epoch_{epoch}.pth'
-    weights_path = Path(f'{args.weights_path}/experiments/{args.default_index}/weights/epoch_{epoch}.pth')
+    if args.temp_dir is not None:
+        weights_path = Path(f'{args.temp_dir}/experiments/{args.default_index}/weights/epoch_{epoch}.pth')
+    else:
+        weights_path = Path(f'experiments/{args.default_index}/weights/epoch_{epoch}.pth')
+
     if not weights_path.exists():
         raise ValueError(f"Experiment needs to be trained")
 
     input_shape = (3, 32, 32) if dataset == 'cifar10' else (1, 28, 28)
-    _, test_set = get_dataset(dataset, data_loader=False, data_path=args.data_path)
+    _, test_set = get_dataset(dataset, data_loader=False, data_path=args.temp_dir)
     test_size = len(test_set) if args.test_size == -1 else args.test_size
     exp_dataset_test, exp_labels_test = subset(test_set, test_size, input_shape=input_shape)
 
@@ -186,7 +176,7 @@ def main():
                                   exp_labels_test,
                                   weights_path,
                                   architecture_index,
-                                  experiment=args.default_index,
+                                  default_index=args.default_index,
                                   nb_workers=args.nb_workers,
                                   residual=residual,
                                   input_shape=input_shape,

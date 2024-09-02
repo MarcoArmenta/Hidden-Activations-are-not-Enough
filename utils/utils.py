@@ -46,6 +46,9 @@ def get_dataset(data_set, batch_size=32, data_loader=True, data_path=None):
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
     if data_path is None:
         data_path = './data'
+    else:
+        data_path = data_path + '/data'
+
     if data_set == 'mnist':
         train_set = torchvision.datasets.MNIST(root=data_path, train=True, transform=transform, download=True)
         test_set = torchvision.datasets.MNIST(root=data_path, train=False, transform=transform, download=True)
@@ -174,6 +177,7 @@ def subset(train_set, length: int, input_shape=(1, 28, 28)):
         exp_dataset[i] = train_set[j][0]
         exp_labels[i] = train_set.targets[j]
     return exp_dataset, exp_labels
+
 
 def zip_and_cleanup(src_directory, zip_filename, clean=True):
     # Create a zip archive

@@ -7,7 +7,7 @@ from multiprocessing import Pool
 from pathlib import Path
 
 from matrix_construction.representation import MlpRepresentation
-from utils.utils import get_model, get_dataset
+from utils.utils import get_model
 from constants.constants import DEFAULT_EXPERIMENTS, ATTACKS
 from utils.utils import zip_and_cleanup
 
@@ -27,7 +27,12 @@ def parse_args(parser=None):
         default=8,
         help="How many processes in parallel for adversarial examples computations and their matrices.",
     )
-    parser.add_argument("--temp_dir", type=str)
+    parser.add_argument(
+        "--temp_dir",
+        type=str,
+        default=None,
+        help="Temporary directory to save and read data. Useful when using clusters."
+    )
 
     return parser.parse_args()
 
@@ -35,7 +40,11 @@ def parse_args(parser=None):
 def save_one_matrix(im, attack, i, default_index, weights_path, architecture_index, residual, input_shape, dropout, temp_dir):
     model = get_model(weights_path, architecture_index, residual, input_shape, dropout)
     representation = MlpRepresentation(model)
-    matrix_save_path = Path(f'{temp_dir}/experiments/{default_index}/adversarial_matrices') / f'{attack}' / f'{i}/matrix.pth'
+    if temp_dir is not None:
+        matrix_save_path = Path(f'{temp_dir}/experiments/{default_index}/adversarial_matrices') / f'{attack}' / f'{i}/matrix.pth'
+    else:
+        matrix_save_path = Path(f'experiments/{default_index}/adversarial_matrices') / f'{attack}' / f'{i}/matrix.pth'
+
     matrix_save_path.parent.mkdir(parents=True, exist_ok=True)
     if not matrix_save_path.exists():
         mat = representation.forward(im)
@@ -51,7 +60,10 @@ def generate_matrices_for_attacks(default_index,
                                   dropout,
                                   nb_workers):
     for attack in ['test'] + ATTACKS:
-        path_adv_examples = Path(temp_dir) / f'experiments/{default_index}/adversarial_examples' / f"{attack}/adversarial_examples.pth"
+        if temp_dir is not None:
+            path_adv_examples = Path(temp_dir) / f'experiments/{default_index}/adversarial_examples' / f"{attack}/adversarial_examples.pth"
+        else:
+            path_adv_examples = Path(f'experiments/{default_index}/adversarial_examples') / f"{attack}/adversarial_examples.pth"
         if not path_adv_examples.exists():
             print(f'Attak {attack} does NOT exists.', flush=True)
             continue
@@ -97,19 +109,15 @@ def main():
 
     print("Experiment: ", args.default_index, flush=True)
 
-    #weights_path = Path(f'experiments/{args.default_index}/weights') / f'epoch_{epoch}.pth'
-    weights_path = Path(f'{args.temp_dir}/experiments/{args.default_index}/weights/epoch_{epoch}.pth')
+    if args.temp_dir is not None:
+        weights_path = Path(f'{args.temp_dir}/experiments/{args.default_index}/weights/epoch_{epoch}.pth')
+    else:
+        weights_path = Path(f'experiments/{args.default_index}/weights/epoch_{epoch}.pth')
+
     if not weights_path.exists():
         raise ValueError(f"Experiment needs to be trained")
 
     input_shape = (3, 32, 32) if dataset == 'cifar10' else (1, 28, 28)
-    #_, test_set = get_dataset(dataset, data_loader=False, data_path=f'{args.temp_dir}/data/')
-
-    #experiment_dir = Path(f'{args.temp_dir}/experiments/{args.default_index}/adversarial_examples')
-    #experiment_dir.mkdir(parents=True, exist_ok=True)
-
-    #path_adv_matrices = Path(f'experiments/{args.default_index}/adversarial_matrices/')
-    #path_adv_matrices.mkdir(parents=True, exist_ok=True)
 
     generate_matrices_for_attacks(args.default_index,
                                   args.temp_dir,
@@ -120,8 +128,10 @@ def main():
                                   dropout,
                                   args.nb_workers)
 
-    zip_and_cleanup(f'{args.temp_dir}/experiments/{args.default_index}/adversarial_matrices/',
-                    f'experiments/{args.default_index}/adversarial_matrices/adversarial_matrices', clean=False)
+    if args.temp_dir is not None:
+        zip_and_cleanup(f'{args.temp_dir}/experiments/{args.default_index}/adversarial_matrices/',
+                        f'experiments/{args.default_index}/adversarial_matrices/adversarial_matrices', clean=False)
+
 
 if __name__ == "__main__":
     main()

@@ -14,4 +14,4 @@ mkdir -p $SLURM_TMPDIR/experiments/$SLURM_ARRAY_TASK_ID/weights/
 echo "Copying weights..."
 cp /home/armenta/scratch/MatrixStatistics/experiments/$SLURM_ARRAY_TASK_ID/weights/* $SLURM_TMPDIR/experiments/$SLURM_ARRAY_TASK_ID/weights/
 echo "Weights copied to temp directory..."
-python generate_matrices.py --nb_workers=$SLURM_CPUS_PER_TASK --default_index=$SLURM_ARRAY_TASK_ID --weights_path=$SLURM_TMPDIR
+python generate_matrices.py --nb_workers=$SLURM_CPUS_PER_TASK --default_index=$SLURM_ARRAY_TASK_ID --temp_dir=$SLURM_TMPDIR

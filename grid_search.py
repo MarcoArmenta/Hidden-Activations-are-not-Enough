@@ -7,6 +7,7 @@ import pandas as pd
 from pathlib import Path
 import json
 
+
 def parse_args(parser=None):
     if parser is None:
         parser = argparse.ArgumentParser()
@@ -43,8 +44,26 @@ def parse_args(parser=None):
         default=8,
         help="Number of threads for parallel computation",
     )
-    parser.add_argument("--temp_dir", type=str, default=None)
-    parser.add_argument("--rej_lev", type=int, default=1)
+    parser.add_argument(
+        "--temp_dir",
+        type=str,
+        default=None,
+        help="Temporary directory to save and read data. Useful when using clusters.",
+    )
+    parser.add_argument(
+        "--rej_lev",
+        type=int,
+        default=1,
+        help="Wheter or not to compute rejection level. If 1 then it computes rejection level using only std and d1, "
+             "if 0 it runs the detection method on d2 with precomputed rejection level.",
+    )
+    parser.add_argument(
+        "--extensive_search",
+        type=int,
+        default=0,
+        help="If 1, it runs grid search on smaller and more values for std, d1 and d2. "
+             "Experiments such as 7 and 11 require this for good results.",
+    )
 
     return parser.parse_args()
 
@@ -81,12 +100,17 @@ def run_adv_examples_script(params):
             print("Rejection level too low", flush=True)
             return
 
-
-
-    cmd = f"source ENV/bin/activate &&" \
-              f" python compute_rejection_level.py --std {std} --d1 {d1} " \
-              f"--default_index {index} --temp_dir {temp_dir}"
     if rej_lev_flag == 1:
+        if temp_dir is not None:
+            cmd = f"source ENV/bin/activate &&" \
+                  f" python compute_rejection_level.py --std {std} --d1 {d1} " \
+                  f"--default_index {index} --temp_dir {temp_dir}"
+        else:
+            # Assumes the environment is named "matrix"
+            cmd = f"source matrix/bin/activate &&" \
+                  f" python compute_rejection_level.py --std {std} --d1 {d1} " \
+                  f"--default_index {index}"
+
         result = subprocess.run(
             cmd, shell=True, capture_output=True, text=True, executable="/bin/bash"
         )
@@ -99,15 +123,19 @@ def run_adv_examples_script(params):
         for line in output_lines:
             if "Rejection level" in line:
                 rej_lev = float(line.split()[-1].strip(':'))
-
-        if rej_lev < 1:
-            return
+                print(f"Rejection level: {rej_lev}", flush=True)
 
         return
 
-    cmd = f"source ENV/bin/activate &&" \
+    if temp_dir is not None:
+        cmd = f"source ENV/bin/activate &&" \
+                  f" python detect_adversarial_examples.py --std {std} --d1 {d1} --d2 {d2} " \
+                  f"--default_index {index} --temp_dir {temp_dir}"
+    else:
+        # Assumes the environment is named "matrix"
+        cmd = f"source matrix/bin/activate &&" \
               f" python detect_adversarial_examples.py --std {std} --d1 {d1} --d2 {d2} " \
-              f"--default_index {index} --temp_dir {temp_dir}"
+              f"--default_index {index}"
 
     result = subprocess.run(
         cmd, shell=True, capture_output=True, text=True, executable="/bin/bash"
@@ -140,7 +168,7 @@ def run_adv_examples_script(params):
 
 def main():
     import numpy as np
-    print("Grid search starting...",flush=True)
+    print("Grid search starting...", flush=True)
     args = parse_args()
 
     experiment_path = Path(f'experiments/{args.default_index}/grid_search/')
@@ -148,10 +176,16 @@ def main():
     output_file = experiment_path / f'grid_search_{args.default_index}.txt'
 
     # Define the parameter grid
-    vals = np.geomspace(0.00001, 1, num=10)
-    std_values = vals # args.std_values
-    d1_values = vals #args.d1_values
-    d2_values = vals #args.d2_values
+    if args.extensive_search == 1:
+        vals = np.geomspace(0.00001, 1, num=10)
+        std_values = vals
+        d1_values = vals
+        d2_values = vals
+    else:
+        std_values = args.std_values
+        d1_values = args.d1_values
+        d2_values = args.d2_values
+
     indexes = [args.default_index]
 
     # Define the directory path
@@ -160,12 +194,11 @@ def main():
     # Initialize an empty list to store the files with value >= 1
     files_to_keep = []
 
-    if args.rej_lev==0:
+    if args.rej_lev == 0:
         # Iterate over the files in the directory
         for filename in os.listdir(dir_path):
             # Check if the file starts with 'reject_at_'
             if filename.startswith('reject_at_'):
-                # Open the file and load the JSON data
                 filepath = os.path.join(dir_path, filename)
                 if os.path.exists(filepath):
                     with open(os.path.join(dir_path, filename), 'r') as f:
@@ -186,14 +219,15 @@ def main():
             with open(output_file, 'w') as f:
                 f.write("std,d1,d2,default_index,good_defence,wrong_rejection\n")
 
-        # Prepare arguments for the workers
+        # Prepare arguments
         param_grid_with_lock = [(std, d1, d2, index, lock, output_file, args.temp_dir, args.rej_lev) for std, d1, d2, index, _ in param_grid]
 
-        # Use multiprocessing Pool to run the scripts in parallel
+        # This case assumes rejection levels were already computed.
         if args.rej_lev == 0:
             param_grid_filtered = [(std, d1, d2, index, lock, output_file, args.temp_dir, args.rej_lev) for std, d1, d2, index, lock, output_file, args.temp_dir, _ in param_grid_with_lock if f'reject_at_{std}_{d1}.json' in files_to_keep]
             with Pool(processes=args.nb_workers) as pool:
                 pool.map(run_adv_examples_script, param_grid_filtered)
+        # This case computes rejection levels only using std and d1.
         else:
             param_grid_with_lock_rej_lev = [(std, d1, 0, index, lock, output_file, args.temp_dir, args.rej_lev) for std, d1, d2, index, _ in param_grid]
             with Pool(processes=args.nb_workers) as pool:

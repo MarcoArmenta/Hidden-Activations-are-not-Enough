@@ -166,8 +166,8 @@ def reject_predicted_attacks(default_index,
                       test_acc, flush=True)
 
             else:
-                print(f'Detected adversarial examples : {rejected_and_attacked} out of {len(attacked_dataset) if a in attacked_dataset else 0}', flush=True)
-                print(f'Successful adversarial examples : {not_rejected_and_attacked} out of {len(attacked_dataset) if a in attacked_dataset else 0}', flush=True)
+                print(f'Detected adversarial examples : {rejected_and_attacked} out of {len(attacked_dataset)}', flush=True)
+                print(f'Successful adversarial examples : {not_rejected_and_attacked} out of {len(attacked_dataset)}', flush=True)
 
     counts_file = f'experiments/{default_index}/counts_per_attack/counts_per_attack_{std}_{d1}_{d2}.json'
     Path(f'experiments/{default_index}/counts_per_attack/').mkdir(parents=True, exist_ok=True)

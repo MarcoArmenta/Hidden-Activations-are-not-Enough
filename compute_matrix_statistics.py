@@ -1,7 +1,6 @@
-from multiprocessing import Pool
 import argparse
 
-from utils.utils import compute_train_statistics, zip_and_cleanup
+from utils.utils import compute_train_statistics
 
 
 def parse_args():
@@ -15,10 +14,6 @@ def main():
     args = parse_args()
     print('Computing matrix statistics', flush=True)
     compute_train_statistics(args.default_index, args.temp_dir)
-    #zip_and_cleanup(f'{args.temp_dir}/experiments/{args.default_index}/matrices/',f'experiments/{args.default_index}/matrices/matrices')
-    #arguments = (i for i in range(18))
-    #with Pool(processes=args.nb_workers) as pool:
-    #    pool.map(compute_train_statistics, arguments)
 
 
 if __name__ == '__main__':

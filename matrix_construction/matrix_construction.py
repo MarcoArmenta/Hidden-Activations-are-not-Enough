@@ -97,7 +97,6 @@ class MatrixConstruction:
                                  input_shape=input_shape,
                                  dropout=self.dropout,
                                  )
-        print('Loading state dictionjary',flush=True)
+
         model.load_state_dict(state_dict)
-        print('done...',flush=True)
         self.compute_matrices_on_dataset(model, chunk_id=chunk_id)

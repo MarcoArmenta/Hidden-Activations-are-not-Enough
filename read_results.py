@@ -50,7 +50,7 @@ def run_detect_adversarial_examples(std, d1, d2, default_index, top, temp_dir=No
               f" python detect_adversarial_examples.py --std {std} --d1 {d1} --d2 {d2} " \
               f"--default_index {default_index} --temp_dir {temp_dir}"
     else:
-        cmd = f"source ~/NeuralNets/MatrixStatistics/matrix/bin/activate &&" \
+        cmd = f"source matrix/bin/activate &&" \
               f" python detect_adversarial_examples.py --std {std} --d1 {d1} --d2 {d2} " \
               f"--default_index {default_index}"
 
