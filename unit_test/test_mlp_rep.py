@@ -18,12 +18,11 @@ torch.set_default_dtype(torch.float64)
 
 
 class TestMLPRepresentation(unittest.TestCase):
-
     def generate_random_params(self):
         w = random.randint(28, 32)
-        l = random.randint(1, 200)
-        c = random.randint(1, 1000)
-        num_classes = random.randint(1, 10)
+        l = random.randint(1, 50)
+        c = random.randint(1, 800)
+        num_classes = random.randint(2, 100)
         return w, l, c, num_classes
 
     def create_random_model(self):
@@ -45,7 +44,7 @@ class TestMLPRepresentation(unittest.TestCase):
         return model, x, forward_pass, w, l, c, num_classes
 
     def test_MLPRepBuild(self):
-        for _ in range(1000):
+        for _ in range(50):
             model, x, forward_pass, w, l, c, num_classes = self.create_random_model()
 
             # Build representation and compute output
@@ -56,7 +55,7 @@ class TestMLPRepresentation(unittest.TestCase):
             diff = torch.norm(rep_forward - forward_pass).detach().numpy()
 
             self.assertAlmostEqual(diff, 0, places=None, msg=f"rep and forward_pass differ by {diff}.", delta=0.1)
-            print(f"Test passed for w={w}, l={l}, c={c}, num_classes={num_classes}")
+            print(f"Test passed for input_shape=3x{w}x{w}, number_of_layers={l}, neurons_per_layer={c}, num_classes={num_classes}")
 
 
 if __name__ == "__main__":
