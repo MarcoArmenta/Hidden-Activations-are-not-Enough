@@ -96,15 +96,8 @@ python read_results.py --default_index {idx}
 This will create files `experiments/{idx}/results/{i}_output_{s}_{d1}_{d2}.txt` containing the output of the detection algorithm ran with parameters `s, d1, d2` with the top 3 results given by `i=0,1,2`.
 
 ## Order for running scripts
-graph LR
-    1 --> 2
-    1 --> 4
-    1 --> 6
-    2 --> 3
-    4 --> 5
-    6 --> 7
-    7 --> 8
-    8 --> 9
+nodes = 1, 2, 3, 4, 5, 6, 7, 8, 9
+oriented edges = (1, 2), (1, 4), (1, 6), (2, 3), (4, 5), (6, 7), (7, 8), (8, 9)
 
 
 If you have access to a SLURM cluster, run the following jobs
