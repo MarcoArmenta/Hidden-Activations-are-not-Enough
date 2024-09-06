@@ -96,6 +96,7 @@ python read_results.py --default_index {idx}
 This will create files `experiments/{idx}/results/{i}_output_{s}_{d1}_{d2}.txt` containing the output of the detection algorithm ran with parameters `s, d1, d2` with the top 3 results given by `i=0,1,2`.
 
 ## Order for running scripts
+```mermaid
 flowchart TD
     A[Training] --> B[Generate matrices]
     A --> C[Adversarial examples]
@@ -107,7 +108,7 @@ flowchart TD
     D --> G
     G --> H[Grid search]
     H --> I[Read results]
-
+```
 
 
 If you have access to a SLURM cluster, run the following jobs
