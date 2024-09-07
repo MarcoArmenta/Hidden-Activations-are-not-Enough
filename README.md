@@ -45,13 +45,12 @@ flowchart TD
     H --> I[I]
 ```
 
+## A. Train the networks
 ```mermaid
-flowchart TD
+flowchart LR
     A[A]
 ```
-### A. Train the networks
-To train a network run the training script like this:
-
+To train a network corresponding to a default index `idx` run the training script like this:
 ```bash
 python training.py --default_index {idx}
 ```
@@ -61,57 +60,72 @@ If you have access to a SLURM cluster, run the following job
 sbatch job_training.sh
 ```
 The variable `$SLURM_ARRAY_TASK_ID` determines the index of the experiment.
-### B. Generate matrices
+## B. Generate matrices
+```mermaid
+flowchart LR
+    A[B]
+```
 To generate matrices on a trained network run the following:
-
 ```bash
 python generate_matrices.py --default_index {idx} --num_samples_per_class {num} --nb_workers {workers}
 ```
-
-By default, `num=1000` and 'workers=8`. This will create and save all the matrices in the directory `experiments/{idx}/matrices/{k}` where `k` runs over all the classes in the dataset. 
+By default, `num=1000` and `workers=8`. This will create and save all the matrices in the directory `experiments/{idx}/matrices/{k}` where `k` runs over all the classes in the dataset. 
 If you have access to a SLURM cluster, run the following job
 ```bash
 sbatch job_matrices.sh
 ```
 The variable `$SLURM_ARRAY_TASK_ID` determines the index of the experiment.
-### C. Generate adversarial examples
+## C. Generate adversarial examples
+```mermaid
+flowchart LR
+    A[C]
+```
 To generate adversarial examples on the 21 attack methods specified in `constants/constants.py` run the following:
-
 ```bash
 python generate_adversarial_examples.py --default_index {idx} --test_size {ts} --nb_workers {workers}
 ```
-By default, `ts=-1`, which takes the whole test set to compute adversarial examples.
+By default, `ts=-1`, takes the whole test set to compute adversarial examples.
 This will create files `experiments/{idx}/adversarial_examples/{attack_method}/adversarial_examples.pth` which contain all the generated adversarial examples per `attack_method`.
 If you have access to a SLURM cluster, run the following job
 ```bash
 sbatch job_generate_adv_ex.sh
 ```
 The variable `$SLURM_ARRAY_TASK_ID` determines the index of the experiment.
-### D. Compute matrices for rejection level
+## D. Compute matrices for rejection level
+```mermaid
+flowchart LR
+    A[D]
+```
 To generate matrices from a random subset of the train data to later compute the rejection level as specified in the paper, run the following:
 ```bash
 python compute_matrices_for_rejection_level.py --default_index {idx} --num_samples_rejection_level {N} --nb_workers {workers}
 ```
-By default, `N=10k`.
-This will create files `experiments/{idx}/rejection_levels/matrices/{i}/matrix.pth` together with the prediction of the network on that sample `experiments/{idx}/rejection_levels/matrices/{i}/prediction.pth`.
+By default, `N=10k`. This will create files `experiments/{idx}/rejection_levels/matrices/{i}/matrix.pth` together with the corresponding prediction of the network `experiments/{idx}/rejection_levels/matrices/{i}/prediction.pth`.
 If you have access to a SLURM cluster, run the following job
 ```bash
 sbatch job_gen_mat_rej_lev.sh
 ```
 The variable `$SLURM_ARRAY_TASK_ID` determines the index of the experiment.
-### E. Compute matrix statistics
+## E. Compute matrix statistics
+```mermaid
+flowchart LR
+    A[E]
+```
 To compute matrix statistics, i.e., mean and standard deviation matrices per class run the following:
-
 ```bash
 python compute_matrix_statistics.py --default_index {idx}
 ```
-This will create a json file in `experiments/{idx}/matrices/matrix_statistics.json`.
+This will create the following JSON file `experiments/{idx}/matrices/matrix_statistics.json`.
 If you have access to a SLURM cluster, run the following job
 ```bash
 sbatch job_matrix_statistics.sh
 ```
 The variable `$SLURM_ARRAY_TASK_ID` determines the index of the experiment.
-### F. Generate adversarial matrices
+## F. Generate adversarial matrices
+```mermaid
+flowchart LR
+    A[F]
+```
 To generate the matrices of each adversarial example generated in step 4 run the following:
 ```bash
 python generate_adversarial_matrices.py --default_index {idx} --nb_workers {workers}
@@ -122,18 +136,27 @@ If you have access to a SLURM cluster, run the following job
 sbatch job_generate_adv_mats.sh
 ```
 The variable `$SLURM_ARRAY_TASK_ID` determines the index of the experiment.
-### G. Compute rejection levels
+## G. Compute rejection levels
+```mermaid
+flowchart LR
+    A[G]
+```
 To run a grid search to compute several rejection levels run the following:
 ```bash
 python grid_search.py --default_index {idx} --rej_level 1 --nb_workers {workers}
 ```
-This will create files `experiments/{idx}/rejection_levels/reject_at_s_d.json` for different values of `s, d1`.
+This will create files `experiments/{idx}/rejection_levels/reject_at_{s}_{d1}.json` for different values of `s, d1`.
 If you have access to a SLURM cluster, run the following job
 ```bash
 sbatch job_grid_search.sh
 ```
-The variable `$SLURM_ARRAY_TASK_ID` determines the index of the experiment. **WARNING** You have to manually change the variable `--rej_lev 1` at the bottom of the shell file to compute rejection levels.
-### H. Detect adversarial examples
+The variable `$SLURM_ARRAY_TASK_ID` determines the index of the experiment. 
+**WARNING** You have to change the variable manually `--rej_lev 1` at the bottom of the shell file to compute rejection levels.
+## H. Detect adversarial examples
+```mermaid
+flowchart LR
+    A[H]
+```
 To run the detection algorithm using the pre-computed rejection levels run the following:
 ```bash
 python grid_search.py --default_index {idx} --rej_level 0 --nb_workers {workers}
@@ -143,8 +166,13 @@ If you have access to a SLURM cluster, run the following job
 ```bash
 sbatch job_grid_search.sh
 ```
-The variable `$SLURM_ARRAY_TASK_ID` determines the index of the experiment. **WARNING** You have to manually change the variable `--rej_lev 0` at the bottom of the shell file to run the detection algorithm with the precomputed rejection levels.
+The variable `$SLURM_ARRAY_TASK_ID` determines the index of the experiment. 
+**WARNING** You have to change the variable manually `--rej_lev 0` at the bottom of the shell file to run the detection algorithm with the pre-computed rejection levels.
 ### I. Read results
+```mermaid
+flowchart LR
+    A[I]
+```
 To filter the results from the grid search run the following:
 ```bash
 python read_results.py --default_index {idx}
