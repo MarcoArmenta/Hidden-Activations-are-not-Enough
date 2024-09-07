@@ -5,15 +5,13 @@ This repository refers to the paper: Matrix Statistics for Data Representations 
 ## Repository content
 
 * [constants](constants/constants.py) : contains the MLP architectures used with the 17 different hyperparameters used to train them, as well as the adversarial attack methods used. 
-* [matrix_construction](matrix_construction/matrix_construction.py): contains the functions for constructing the matrices induced by a neural network. 
-* [representation](matrix_construction/representation.py): contains the class to construct a quiver representation given a neural network and a single data sample and the induced matrix.
-* [mlp](model_zoo/mlp.py): contains the mlp model that saves activations and pre-activations of neurons on a single forward pass to construct a quiver representation. 
-* [test_mlp_rep](unit_test/test_mlp_rep.py): contains unit testing for construction of induced quiver representation for random inputs on random MLP architectures. 
+* [matrix_construction](matrix_construction): contains the functions for constructing the matrices induced by a neural network. 
+* [mlp](model_zoo/mlp.py): contains the mlp model that saves activations and pre-activations of neurons on a single forward pass to later construct a quiver representation and the induced matrices. 
+* [test_mlp_rep](unit_test/test_mlp_rep.py): contains unit testing for constructing an induced quiver representation for random inputs on random MLP architectures. 
 * [utils](utils/utils.py): contains utils for datasets, models, computation of mean and standard deviation of matrices, etc.
-* [test_mlp_rep](unit_test/test_mlp_rep.py): contains unit testing for construction of induced quiver representation for random inputs on random MLP architectures.
-
 
 ## Setting up 
+First, create a virtual environment and install requirements. It must be named `matrix`, as later scripts will use this environment name.
 
 ```bash
 virtualenv matrix
@@ -23,15 +21,15 @@ pip install -r requirements.txt
 
 ## Running experiments
 
-For a fixed index `idx` between 0 and 16 you train the default experiment specified in `constants/constants.py`.
-You can add more default experiments by adding them to the DEFAULT_EXPERIMENTS dictionary in `constants/constants.py` and specifying their architecture and training hyperparameters.
+For a fixed index `idx` between 0 and 16 you train the corresponding default experiment specified in `constants/constants.py`.
+You can manually add more default experiments to the DEFAULT_EXPERIMENTS dictionary in `constants/constants.py` by specifying their architecture and training hyperparameters.
 
 ### Hierarchy of experiment directory
 
-The following scripts will create a directory `experiments` in which a subdirectory `experiments/{idx}/` will contain all the metadata for default experiment `idx`.
+The subsequent scripts will create a directory `experiments` in which a subdirectory `experiments/{idx}/` will contain all the metadata for default experiment with index `idx`.
 
 ### Order for running scripts
-Here is a diagram with the order in which to run each script/job. The description of each on of them is below.
+Here is a diagram with the order in which to run each script (or job if using a SLURM cluster). The description of each what each script does and how to run it is down below.
 
 ```mermaid
 flowchart TD
@@ -47,6 +45,10 @@ flowchart TD
     H --> I[I]
 ```
 
+```mermaid
+flowchart TD
+    A[A]
+```
 ### A. Train the networks
 To train a network run the training script like this:
 
