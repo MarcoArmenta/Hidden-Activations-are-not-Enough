@@ -201,4 +201,4 @@ If you have access to a SLURM cluster, run the following job
 ```bash
 sbatch job_read_results.sh
 ```
-The variable `$SLURM_ARRAY_TASK_ID` determines the index of the experiment. You need to specify an account to charge the computations inside the job script. The job script copies the necessary data for the job to the compute node for smooth computation.
+The variable `$SLURM_ARRAY_TASK_ID` determines the index of the experiment. You need to specify an account to charge the computations inside the job script. The job script copies the necessary data for the job to the compute node for smooth computation. This script does not require parallel computation and only 1 CPU will suffice.
