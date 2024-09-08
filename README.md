@@ -170,7 +170,9 @@ If you have access to a SLURM cluster, run the following job
 sbatch job_grid_search.sh
 ```
 The variable `$SLURM_ARRAY_TASK_ID` determines the index of the experiment. You need to specify an account to charge the computations inside the job script. The job script copies the necessary data for the job to the compute node for smooth computation.
+
 **WARNING** You have to manually change the variable `--rej_lev 1` at the bottom of the shell file to compute rejection levels.
+
 ## H. Detect adversarial examples
 ```mermaid
 flowchart LR
@@ -186,7 +188,9 @@ If you have access to a SLURM cluster, run the following job
 sbatch job_grid_search.sh
 ```
 The variable `$SLURM_ARRAY_TASK_ID` determines the index of the experiment. You need to specify an account to charge the computations inside the job script. The job script copies the necessary data for the job to the compute node for smooth computation.
+
 **WARNING** You have to manually change the variable `--rej_lev 0` at the bottom of the shell file to run the detection algorithm with the pre-computed rejection levels.
+
 ### I. Read results
 ```mermaid
 flowchart LR
