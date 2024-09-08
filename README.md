@@ -48,7 +48,7 @@ Default experiments 13, 14, 15 and 16 require a 40 GB GPU to train.
 The subsequent scripts will create a directory `experiments` in which a subdirectory `experiments/{idx}/` will contain all the metadata for the default experiment with index `idx`.
 
 ### Order for running scripts
-Here is a diagram with the order to run the scripts (or job if using a SLURM cluster). Below is the description of what each script does and how to run it.
+Here is a diagram with the order to run the scripts (or job if using a SLURM cluster). Below is the description of what each script does and how to run it. Parallel paths can be run in parallel.
 
 ```mermaid
 flowchart TD
