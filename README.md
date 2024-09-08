@@ -139,7 +139,7 @@ If you have access to a SLURM cluster, run the following job
 ```bash
 sbatch job_matrix_statistics.sh
 ```
-The variable `$SLURM_ARRAY_TASK_ID` determines the index of the experiment. You need to specify an account to charge the computations inside the job script. The job script copies the necessary data for the job to the compute node for smooth computations.
+The variable `$SLURM_ARRAY_TASK_ID` determines the index of the experiment. You need to specify an account to charge the computations inside the job script. The job script copies the necessary data for the job to the compute node for smooth computations. This script does not require parallel computation and only 1 CPU will suffice.
 ## F. Generate adversarial matrices
 ```mermaid
 flowchart LR
