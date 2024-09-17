@@ -1,6 +1,6 @@
 # MatrixStatistics
 
-This repository refers to the paper: Matrix Statistics for Data Representations of Neural Networks
+This repository refers to the paper: Matrix Statistics for Neural Networks
 
 Here is a simplified version of what this code does. Given a neural network and a data sample, we can compute a quiver representation and from it a matrix. We use these induced matrices to detect adversarial examples by converting new data samples fed to the network into matrices and comparing them to statistics taken on a subset of the training set.
 
