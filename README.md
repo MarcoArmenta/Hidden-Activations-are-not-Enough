@@ -1,6 +1,6 @@
 # Hidden Activations are not Enough
 
-This repository refers to the paper titled "Hidden Activations are not Enough: A General Approach to Neural Network Predictions".
+This repository refers to the paper <a href="https://arxiv.org/abs/2409.13163" target="_blank">Hidden Activations Are Not Enough: A General Approach to Neural Network Predictions</a>.
 
 Here is a simplified version of what this code does. Given a neural network and a data sample, we can compute a quiver representation and from it a matrix. We use these induced matrices to detect adversarial examples by converting new data samples fed to the network into matrices and comparing them to statistics taken on a subset of the training set.
 
