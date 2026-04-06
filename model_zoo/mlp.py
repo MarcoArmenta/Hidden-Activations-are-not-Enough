@@ -1,23 +1,35 @@
-"""
-    Simple MLP model that allows bias, residual connections and batch norm layers.
-    It allows to save activations and pre-activations in order for computation of quiver representations.
-"""
 import torch
 import torch.nn as nn
 
 
 class MLP(nn.Module):
+    """
+    Implementation for (almost) arbitrary MLP.
+    This class has a forward method that can be used for training or to 
+    save activations and preactivations to later compute the matrix.
+
+    Args:
+        input_shape (tuple[int,int,int]): Input shape as (channels, height, width)
+        num_classes (int): Number of output classes
+        hidden_sizes (tuple[int]): Number of neurons for each hidden layer
+        activation (str): Activation function to use
+        bias (bool): Whether to use bias
+        dropout (float): Dropout rate (if < 0, no dropout)
+        residual (bool): Whether to use residual connections
+        save (bool): Whether to save activations and preactivations
+        batch_norm (bool): Whether to use batch normalization
+    """
     def __init__(
             self,
             input_shape,
             num_classes,
-            hidden_sizes=(10, 10),
-            activation="relu",
-            bias=False,
-            dropout=-1,
-            residual=False,
-            save=False,
-            batch_norm=False
+            hidden_sizes = (10,10),
+            activation:str = "relu",
+            bias:bool = False,
+            dropout:float = -1,
+            residual:bool = False,
+            save:bool = False,
+            batch_norm:bool = False
     ) -> None:
         super(MLP, self).__init__()
         self.num_classes = num_classes
@@ -32,6 +44,7 @@ class MLP(nn.Module):
         self.layers_size.append(num_classes)
         self.num_layers = len(self.layers_size) + 2
 
+        # TODO: Improve residual connections (like for CNNs)
         self.residual = residual
         self.save = save
         self.bias = bias
@@ -54,7 +67,16 @@ class MLP(nn.Module):
                 self.layers.append(nn.Dropout(dropout))
             self.layers.append(self.get_activation_fn()())
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, return_penultimate:bool=False) -> torch.Tensor:
+        """
+        Forward pass for the MLP.
+
+        Args:
+            x (torch.Tensor): Input tensor
+            return_penultimate (bool): Whether to return features from the penultimate layer
+        Returns:
+            torch.Tensor: Output tensor (either final predictions or penultimate features).
+        """
         self.pre_acts = []
         self.acts = []
         x = x.view(-1, self.input_size)
@@ -70,7 +92,7 @@ class MLP(nn.Module):
         x_res = x
         cont = 0
 
-        for i in range(2, len(self.layers)):
+        for i in range(2, len(self.layers)-1):
             layer = self.layers[i]
             if isinstance(layer, nn.Linear):
                 x = layer(x)
@@ -89,16 +111,31 @@ class MLP(nn.Module):
                     x = layer(x)
                 if self.save:
                     self.acts.append(x.detach().clone())
+        if return_penultimate:
+            return x
+        x = self.layers[-1](x)
         return x
 
     def get_weights(self):
-        w= []
+        """
+        Get the weights of the model.
+
+        Returns:
+            list[torch.Tensor]: List of weights
+        """
+        w = []
         for m in self.modules():
             if isinstance(m, nn.Linear):
                 w.append(m.weight.data)
         return w
 
     def get_biases(self):
+        """
+        Get the biases of the model.
+
+        Returns:
+            list[torch.Tensor]: List of biases
+        """
         b = []
         for m in self.modules():
             if isinstance(m, nn.Linear):
@@ -106,6 +143,12 @@ class MLP(nn.Module):
         return b
 
     def get_activation_fn(self):
+        """
+        Get the activation function.
+
+        Returns:
+            nn.Module: Activation function
+        """
         act_name = self.activation.lower()
         activation_fn_map = {
             "relu": nn.ReLU,
@@ -120,6 +163,9 @@ class MLP(nn.Module):
         return activation_fn_map[act_name]
 
     def init(self) -> None:
+        """
+        Initialize the weights of the model.
+        """
         def init_func(m):
             if isinstance(m, nn.Linear):
                 nn.init.kaiming_uniform_(m.weight.data)

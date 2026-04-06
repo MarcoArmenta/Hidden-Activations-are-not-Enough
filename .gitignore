@@ -1,0 +1,30 @@
+__pycache__/
+experiments/
+data/
+reqs.txt
+matrix/
+.DS_Store
+.idea/
+README-integrity.md
+env/
+requirements-local.txt
+README-responses.md
+README-Marco.md
+AGENTS.md
+Hidden activations - paper.pdf
+reviews.pdf
+CLAUDE.md
+README-run-experiments.md
+report.pdf
+report.tex
+nibi -imagenet.pdf
+CLAUDE.md
+scratch/
+tables/*.tex
+overall_errors.json
+docs/
+.claude/
+CLAUDE.md
+tables_alexnet_cifar10.zip
+tables_alexnet_cifar10/
+CLAUDE.md
